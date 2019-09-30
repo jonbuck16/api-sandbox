@@ -21,10 +21,10 @@ import lombok.extern.flogger.Flogger;
  */
 @Service
 @Flogger
-public class ConfigService {
+public class DefinitionService {
 
 	@Getter
-	private APIDefinition webApiDocument;
+	private APIDefinition apiDefinition;
 
 	@Value("${definitions.directory}")
 	private String definitionDirectory;
@@ -33,7 +33,7 @@ public class ConfigService {
 	public void initialise() {
 		try {
 			log.at(Level.INFO).log("Parsing the API definition...");
-			this.webApiDocument = DefinitionFactory.builder().definitionDir(definitionDirectory).build()
+			this.apiDefinition = DefinitionFactory.builder().definitionDir(definitionDirectory).build()
 					.getDefinitionReader().parse();
 			log.at(Level.INFO).log("API definition(s) parsed successfully...");
 		} catch (DefinitionParsingException e) {
