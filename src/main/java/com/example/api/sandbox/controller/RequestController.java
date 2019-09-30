@@ -2,7 +2,11 @@ package com.example.api.sandbox.controller;
 
 import java.util.logging.Level;
 
+import javax.servlet.http.HttpServletRequest;
+
+import org.dizitart.no2.Nitrite;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,10 +36,13 @@ public class RequestController {
 
 	@Autowired
 	private DefinitionService definitionsService;
+	
+	@Autowired
+	private Nitrite database;
 
 	@GetMapping(value = "/**")
-	public ResponseEntity<?> handleIncomingRequest() {
-		log.at(Level.INFO).log("Processing request");
+	public ResponseEntity<?> handleIncomingRequest(final HttpServletRequest httpRequest) {
+		log.at(Level.INFO).log("Processing request '%s'...", httpRequest.getRequestURI());
 
 		// TODO
 		// - match the end-point to one in the parsed API definition, return 404 if one
@@ -44,12 +51,18 @@ public class RequestController {
 		//   methods
 		// - We need to assert any request parameters, headers and form data if put/post
 		//   request, return 403 (Bad Request) or specific error if one is defined for bad
-		//   request in the api definition
+		//   request in the API definition
 		// - Determine what the return data model looks like based on the API definition
 		//   for the incoming end point.
 		// - Generate the appropriate response data
+		// - Once the response has been processed the response data should be placed
+		//   into an internal in memory database such that if someone was to try and
+		//   recall that data it would be returned
+		// - We use NitriteDB which is an in memory NoSql database, perfect for JSON 
+		//   data
 		// - Return that response data in the appropriate form
 
+		log.at(Level.INFO).log("Request '%s' processed successfully", httpRequest.getRequestURI());
 		return ResponseEntity.ok().build();
 	}
 
