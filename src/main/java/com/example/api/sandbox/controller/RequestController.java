@@ -44,10 +44,12 @@ public class RequestController {
 		log.at(Level.INFO).log("Processing request '%s'...", httpRequest.getRequestURI());
 
 		// TODO
-		// - match the end-point to one in the parsed API definition, return 404 if one
-		//   doesn't match
-		// - My feeling is that the definitions service could contain those matching
-		//   methods
+		// - match the end-point (requestURI) to one in the parsed API definition and
+		//   return 404 if one doesn't match, this will need to take into account path 
+		//   variables such as GET /customer/12345 and/or query parameters such as
+		//   GET /customer?customerNum=12345 for example, the first example will be
+		//   defined as /customer/{customerNum}: in the API definition.
+		// - My feeling is that the definitions service could contain that logic
 		// - We need to assert any request parameters, headers and form data if put/post
 		//   request, query parameters etc. return 403 (Bad Request) or specific error 
 		//   if one is defined for bad request in the API definition
@@ -57,7 +59,7 @@ public class RequestController {
 		// - Once the response has been processed the response data should be placed
 		//   into the internal in memory database such that if someone was to try and
 		//   recall that data it would be returned as it was sent in (SMART)
-		// - We use NitriteDB which is an in memory NoSql database, perfect for JSON 
+		// - We can use NitriteDB which is an in memory NoSql database, perfect for JSON 
 		//   data.
 		// - Return that response data in the appropriate form to the caller.
 
