@@ -1,11 +1,22 @@
 package com.example.api.sandbox.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import javax.servlet.http.HttpServletRequest;
 
-@Data
-@AllArgsConstructor
-public class APIDefinition {
-	private ModelType modelType;
-	private Object model;
+import com.example.api.sandbox.exception.DefinitionNotFoundException;
+import com.example.api.sandbox.exception.RequestNotFoundException;
+
+/**
+ * 
+ * 
+ * @since v1
+ */
+public interface APIDefinition {
+
+	/**
+	 * 
+	 * @param httpRequest
+	 * @throws DefinitionNotFoundException
+	 */
+	void matchRequest(final HttpServletRequest httpServletRequest) throws RequestNotFoundException;
+	
 }

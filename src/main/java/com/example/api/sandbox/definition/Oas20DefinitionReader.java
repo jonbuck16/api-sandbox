@@ -5,15 +5,15 @@ import java.io.IOException;
 
 import com.example.api.sandbox.exception.DefinitionParsingException;
 import com.example.api.sandbox.model.APIDefinition;
-import com.example.api.sandbox.model.ModelType;
+import com.example.api.sandbox.model.OAS20APIDefinition;
 
-import io.swagger.models.Swagger;
 import io.swagger.parser.SwaggerParser;
 
 /**
+ * Reads an Open API v2 (Swagger) definition and returns an appropriate
+ * APIDefinition model.
  * 
- * 
- *
+ * @since v1
  */
 public class Oas20DefinitionReader extends AbstractDefinitionReader {
 
@@ -24,8 +24,7 @@ public class Oas20DefinitionReader extends AbstractDefinitionReader {
 	@Override
 	public APIDefinition parse() throws DefinitionParsingException {
 		try {
-			Swagger openAPI = new SwaggerParser().read(definitionFile.getCanonicalPath());
-			return new APIDefinition(ModelType.OAS2, openAPI);
+			return new OAS20APIDefinition(new SwaggerParser().read(definitionFile.getCanonicalPath()));
 		} catch (IOException e) {
 			throw new DefinitionParsingException(
 					String.format("Unable to parse the API definition, %s", e.getMessage()));

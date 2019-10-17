@@ -4,10 +4,13 @@ import java.util.logging.Level;
 
 import javax.servlet.http.HttpServletRequest;
 
-import org.dizitart.no2.Nitrite;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.api.sandbox.service.DefinitionService;
@@ -36,35 +39,42 @@ public class RequestController {
 	@Autowired
 	private DefinitionService definitionsService;
 	
-	@Autowired
-	private Nitrite database;
 
 	@GetMapping(value = "/**")
-	public ResponseEntity<?> handleIncomingRequest(final HttpServletRequest httpRequest) {
-		log.at(Level.INFO).log("Processing request '%s'...", httpRequest.getRequestURI());
-
-		// TODO
-		// - match the end-point (requestURI) to one in the parsed API definition and
-		//   return 404 if one doesn't match, this will need to take into account path 
-		//   variables such as GET /customer/12345 and/or query parameters such as
-		//   GET /customer?customerNum=12345 for example, the first example will be
-		//   defined as /customer/{customerNum}: in the API definition.
-		// - My feeling is that the definitions service could contain that logic
-		// - We need to assert any request parameters, headers and form data if put/post
-		//   request, query parameters etc. return 403 (Bad Request) or specific error 
-		//   if one is defined for bad request in the API definition
-		// - Determine what the return data model looks like based on the API definition
-		//   for the incoming end point.
-		// - Generate the appropriate response data
-		// - Once the response has been processed the response data should be placed
-		//   into the internal in memory database such that if someone was to try and
-		//   recall that data it would be returned as it was sent in (SMART)
-		// - We can use NitriteDB which is an in memory NoSql database, perfect for JSON 
-		//   data.
-		// - Return that response data in the appropriate form to the caller.
-
-		log.at(Level.INFO).log("Request '%s' processed successfully", httpRequest.getRequestURI());
-		return ResponseEntity.ok().build();
+	public ResponseEntity<?> handleIncomingGetRequest(final HttpServletRequest httpServletRequest) {
+		return handleRequest(httpServletRequest);
+	}
+	
+	@PostMapping(value = "/**")
+	public ResponseEntity<?> handleIncomingPostRequest(final HttpServletRequest httpServletRequest) {
+		return handleRequest(httpServletRequest);
+	}
+	
+	@PutMapping(value = "/**")
+	public ResponseEntity<?> handleIncomingPutRequest(final HttpServletRequest httpServletRequest) {
+		return handleRequest(httpServletRequest);
+	}
+	
+	@PatchMapping(value = "/**")
+	public ResponseEntity<?> handleIncomingPatchRequest(final HttpServletRequest httpServletRequest) {
+		return handleRequest(httpServletRequest);
+	}
+	
+	@DeleteMapping(value = "/**")
+	public ResponseEntity<?> handleIncomingDeleteRequest(final HttpServletRequest httpServletRequest) {
+		return handleRequest(httpServletRequest);
+	}
+		
+	/**
+	 * 
+	 * @param httpServletRequest
+	 * @return
+	 */
+	private ResponseEntity<?> handleRequest(final HttpServletRequest httpServletRequest) {
+		log.at(Level.INFO).log("Processing request '%s'...", httpServletRequest.getRequestURI());
+		final String jsonResponse = definitionsService.processRequest(httpServletRequest);
+		log.at(Level.INFO).log("Request '%s' processed successfully", httpServletRequest.getRequestURI());
+		return ResponseEntity.ok(jsonResponse);		
 	}
 
 }

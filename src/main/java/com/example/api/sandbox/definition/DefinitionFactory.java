@@ -50,7 +50,7 @@ public class DefinitionFactory {
 		for (File file : Files.fileTraverser().breadthFirst(new File(definitionDir))) {
 			try {
 				if (allowableFile(file)) {
-					String firstLine = Files.asCharSource(file, StandardCharsets.UTF_8).readFirstLine();
+					final String firstLine = Files.asCharSource(file, StandardCharsets.UTF_8).readFirstLine();
 					if (firstLine.contains("#%RAML 0.8")) {
 						apiFiles.add(new Raml08DefinitionReader(file));
 					} else if (firstLine.contains("#%RAML 1.0")) {
@@ -65,21 +65,19 @@ public class DefinitionFactory {
 					}
 				}
 			} catch (IOException e) {
-				log.at(Level.WARNING).log(String.format("Unable to read the file %s", file.getName()));
+				log.atWarning().log(String.format("Unable to read the file %s", file.getName()));
 			}
 		}
 
-		if (apiFiles.isEmpty())
-
-		{
+		if (apiFiles.isEmpty()) {
 			throw new DefinitionParsingException("No API files found in the definition directory!");
 		}
 
 		if (apiFiles.size() > 1) {
-			log.at(Level.INFO).log("More than one API file found...");
+			log.atWarning().log("More than one API file found, only the first API definition will be processed...");
 		}
 
-		log.at(Level.INFO).log("Returning the API Definition %s", apiFiles.get(0));
+		log.atInfo().log("Using the API Definition '%s'", apiFiles.get(0));
 		return apiFiles.get(0);
 	}
 
