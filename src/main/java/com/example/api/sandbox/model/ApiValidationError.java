@@ -1,20 +1,18 @@
 package com.example.api.sandbox.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
+import lombok.Getter;
 
-@Data
-@EqualsAndHashCode(callSuper = false)
-@AllArgsConstructor
+/**
+ * 
+ * 
+ * @since v1
+ */
 public class ApiValidationError extends ApiSubError {
-	private String object;
-	private String field;
-	private Object rejectedValue;
-	private String message;
+	@Getter private String field;
+	@Getter private String message;
 
-	public ApiValidationError(String object, String message) {
-		this.object = object;
-		this.message = message;
+	public ApiValidationError(final String fieldValue, final String messageValue) {
+		this.field = fieldValue;
+		this.message = messageValue;
 	}
 }

@@ -3,16 +3,13 @@ package com.example.api.sandbox.service;
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 
-import org.dizitart.no2.Nitrite;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.api.sandbox.definition.DefinitionFactory;
-import com.example.api.sandbox.exception.DefinitionNotFoundException;
 import com.example.api.sandbox.exception.DefinitionParsingException;
 import com.example.api.sandbox.exception.RequestNotFoundException;
 import com.example.api.sandbox.model.APIDefinition;
@@ -34,9 +31,6 @@ public class DefinitionService {
 
 	@Value("${definitions.directory}")
 	private String definitionDirectory;
-
-	@Autowired
-	private Nitrite database;
 
 	@PostConstruct
 	public void initialise() {
@@ -77,14 +71,12 @@ public class DefinitionService {
 	 * 
 	 * @param httpRequest the incoming HttpServletRequest to process
 	 */
-	public String processRequest(final HttpServletRequest httpRequest) {
+	public Object processRequest(final HttpServletRequest httpRequest) {
 		try {
-			apiDefinition.matchRequest(httpRequest);
+			return apiDefinition.matchRequest(httpRequest);
 		} catch (RequestNotFoundException ex) {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Request not found!", ex);
 		}
-
-		return null;
 	}
 
 }

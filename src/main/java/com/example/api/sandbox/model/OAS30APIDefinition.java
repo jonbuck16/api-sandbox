@@ -2,7 +2,7 @@ package com.example.api.sandbox.model;
 
 import javax.servlet.http.HttpServletRequest;
 
-import com.example.api.sandbox.exception.DefinitionNotFoundException;
+import com.example.api.sandbox.exception.RequestNotFoundException;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import lombok.Getter;
@@ -23,8 +23,9 @@ public class OAS30APIDefinition extends AbstractAPIDefinition {
 	}
 
 	@Override
-	public void matchRequest(HttpServletRequest httpRequest) throws DefinitionNotFoundException {
+	public Object matchRequest(HttpServletRequest httpServletRequest) throws RequestNotFoundException {
 		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

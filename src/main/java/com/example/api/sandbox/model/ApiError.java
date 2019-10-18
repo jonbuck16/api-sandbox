@@ -1,6 +1,7 @@
 package com.example.api.sandbox.model;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.springframework.http.HttpStatus;
 
@@ -18,6 +19,7 @@ public class ApiError {
 	@Getter @Setter private LocalDateTime timestamp;
 	@Getter @Setter private String message;
 	@Getter @Setter private String debugMessage;
+	@Getter @Setter private List<ApiSubError> subErrors;
 
 	private ApiError() {
 		timestamp = LocalDateTime.now();

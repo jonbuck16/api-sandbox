@@ -5,6 +5,7 @@ import java.util.logging.Level;
 import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,22 +41,22 @@ public class RequestController {
 	private DefinitionService definitionsService;
 	
 
-	@GetMapping(value = "/**")
+	@GetMapping(value = "/**", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
 	public ResponseEntity<?> handleIncomingGetRequest(final HttpServletRequest httpServletRequest) {
 		return handleRequest(httpServletRequest);
 	}
 	
-	@PostMapping(value = "/**")
+	@PostMapping(value = "/**", consumes = MediaType.ALL_VALUE, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
 	public ResponseEntity<?> handleIncomingPostRequest(final HttpServletRequest httpServletRequest) {
 		return handleRequest(httpServletRequest);
 	}
 	
-	@PutMapping(value = "/**")
+	@PutMapping(value = "/**", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
 	public ResponseEntity<?> handleIncomingPutRequest(final HttpServletRequest httpServletRequest) {
 		return handleRequest(httpServletRequest);
 	}
 	
-	@PatchMapping(value = "/**")
+	@PatchMapping(value = "/**", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
 	public ResponseEntity<?> handleIncomingPatchRequest(final HttpServletRequest httpServletRequest) {
 		return handleRequest(httpServletRequest);
 	}
@@ -71,10 +72,10 @@ public class RequestController {
 	 * @return
 	 */
 	private ResponseEntity<?> handleRequest(final HttpServletRequest httpServletRequest) {
-		log.at(Level.INFO).log("Processing request '%s'...", httpServletRequest.getRequestURI());
-		final String jsonResponse = definitionsService.processRequest(httpServletRequest);
-		log.at(Level.INFO).log("Request '%s' processed successfully", httpServletRequest.getRequestURI());
-		return ResponseEntity.ok(jsonResponse);		
+		log.at(Level.INFO).log("Processing incoming request [%s] %s", httpServletRequest.getMethod(), httpServletRequest.getRequestURI());
+		final Object response = definitionsService.processRequest(httpServletRequest);
+		log.at(Level.INFO).log("Request [%s] %s processed successfully", httpServletRequest.getMethod(), httpServletRequest.getRequestURI());
+		return ResponseEntity.ok(response);		
 	}
 
 }

@@ -13,10 +13,10 @@ import com.example.api.sandbox.exception.RequestNotFoundException;
 public interface APIDefinition {
 
 	/**
-	 * 
+	 *  
 	 * @param httpRequest
 	 * @throws DefinitionNotFoundException
 	 */
-	void matchRequest(final HttpServletRequest httpServletRequest) throws RequestNotFoundException;
+	Object matchRequest(final HttpServletRequest httpServletRequest) throws RequestNotFoundException;
 	
 }
