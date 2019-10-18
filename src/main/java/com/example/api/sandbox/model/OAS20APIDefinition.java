@@ -15,6 +15,7 @@ import com.example.api.sandbox.exception.DefinitionNotFoundException;
 import com.example.api.sandbox.exception.InvalidInputException;
 import com.example.api.sandbox.exception.RequestNotFoundException;
 import com.example.api.sandbox.utils.SwaggerPathUtils;
+import com.google.gson.Gson;
 
 import io.swagger.models.HttpMethod;
 import io.swagger.models.Operation;
@@ -47,7 +48,7 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
 	 * 
 	 */
 	@Override
-	public Object matchRequest(final HttpServletRequest httpServletRequest) throws RequestNotFoundException {
+	public Object processRequest(final HttpServletRequest httpServletRequest) throws RequestNotFoundException {
 		if (swagger.getPaths().isEmpty()) {
 			throw new DefinitionNotFoundException();
 		}
@@ -59,14 +60,26 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
 				if (entry.getValue().getOperationMap().containsKey(httpMethod)) {
 					log.atInfo().log("Request matched to path [%s] %s", httpMethod.name(), entry.getKey());
 
-					// Get Operation
+					// Get Operation from the definition
 					Operation operation = entry.getValue().getOperationMap().get(httpMethod);
 
+					// Validate that the data supplied to the application is valid for the request
 					validateInput(httpServletRequest, operation);
 
-					// Determine response
+					// Generate the response data, this will either be generated from the request
+					// and persisted in the internal database, an entry updated from the request and
+					// persisted, or just simply retrieved from the database...
+					if (httpMethod.equals(HttpMethod.POST)) {
+						log.atInfo().log("Persisting data...");
+						return createResponse(httpServletRequest, operation);
+					} else if (httpMethod.equals(HttpMethod.PUT)) {
+						log.atInfo().log("Updating data...");
+						return updateResponse(httpServletRequest, operation);
+					} else {
+						log.atInfo().log("Retrieving data....");
+						return retrieveResponse(httpServletRequest, operation);
+					}
 
-					return ImmutableMap.of("message", "successful");
 				}
 			}
 		}
@@ -76,41 +89,77 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
 	}
 
 	/**
+	 * 
+	 * @param httpServletRequest
+	 * @param operation
+	 */
+	private Object createResponse(HttpServletRequest httpServletRequest, Operation operation) {
+		return ImmutableMap.of("result", "create"); 
+	}
+
+	/**
+	 * 
+	 * @param httpServletRequest
+	 * @param operation
+	 */
+	private Object updateResponse(HttpServletRequest httpServletRequest, Operation operation) {
+		return ImmutableMap.of("result", "update");
+	}
+
+	/**
+	 * 
+	 * @param httpServletRequest
+	 * @param operation
+	 */
+	private Object retrieveResponse(HttpServletRequest httpServletRequest, Operation operation) {
+		return ImmutableMap.of("result", "get");
+	}
+
+	/**
 	 * Validates that the input is correct
 	 * 
 	 * @param httpServletRequest
 	 * @param operation
 	 */
-	private void validateInput(final HttpServletRequest httpServletRequest, Operation operation) {
-		// generate list of parameters to validate
-		List<String> parametersToValidate = new ArrayList<>();
+	private void validateInput(final HttpServletRequest httpServletRequest, final Operation operation) {
+		// Generate list of parameters to validate against, we will use this list to
+		// 'tick off' which parameters exist in the request and therefore if anything is
+		// left then that is missing
+		final List<String> parametersToValidate = new ArrayList<>();
 		operation.getParameters().forEach(p -> parametersToValidate.add(p.getName()));
 
 		for (Parameter parameter : operation.getParameters()) {
-			switch (parameter.getIn()) {
-			case "body":
-				parametersToValidate.remove(parameter.getName());
-				break;
-			case "header":
-				Enumeration<String> headerNames = httpServletRequest.getHeaderNames();
-				while(headerNames.hasMoreElements()) {
-					final String headerName = headerNames.nextElement();
-					if (headerName.equals(parameter.getName())) {
+			if (parameter.getRequired()) {
+				switch (parameter.getIn()) {
+				case "body":
+					// TODO Validate body against the model
+					if (httpServletRequest.getContentLength() > 0) {
 						parametersToValidate.remove(parameter.getName());
 					}
-				}
-				break;
-			case "path":
-				parametersToValidate.remove(parameter.getName());
-				break;
-			default: // formData
-				Enumeration<String> parameterNames = httpServletRequest.getParameterNames();
-				while (parameterNames.hasMoreElements()) {
-					final String parameterName = parameterNames.nextElement();
-					if (parameterName.equals(parameter.getName())) {
-						parametersToValidate.remove(parameter.getName());
+					break;
+				case "header":
+					Enumeration<String> headerNames = httpServletRequest.getHeaderNames();
+					while (headerNames.hasMoreElements()) {
+						final String headerName = headerNames.nextElement();
+						if (headerName.equals(parameter.getName())) {
+							parametersToValidate.remove(parameter.getName());
+						}
+					}
+					break;
+				case "path":
+					parametersToValidate.remove(parameter.getName());
+					break;
+				default: // formData
+					Enumeration<String> parameterNames = httpServletRequest.getParameterNames();
+					while (parameterNames.hasMoreElements()) {
+						final String parameterName = parameterNames.nextElement();
+						if (parameterName.equals(parameter.getName())) {
+							parametersToValidate.remove(parameter.getName());
+						}
 					}
 				}
+			} else {
+				parametersToValidate.remove(parameter.getName());
 			}
 		}
 		if (parametersToValidate.size() > 0) {

@@ -73,7 +73,7 @@ public class DefinitionService {
 	 */
 	public Object processRequest(final HttpServletRequest httpRequest) {
 		try {
-			return apiDefinition.matchRequest(httpRequest);
+			return apiDefinition.processRequest(httpRequest);
 		} catch (RequestNotFoundException ex) {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Request not found!", ex);
 		}
