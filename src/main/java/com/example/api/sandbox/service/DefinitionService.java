@@ -6,13 +6,13 @@ import javax.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.api.sandbox.definition.DefinitionFactory;
 import com.example.api.sandbox.exception.DefinitionParsingException;
 import com.example.api.sandbox.exception.RequestNotFoundException;
 import com.example.api.sandbox.model.APIDefinition;
+import com.example.api.sandbox.model.RequestResponse;
 
 import lombok.Getter;
 import lombok.extern.flogger.Flogger;
@@ -71,7 +71,7 @@ public class DefinitionService {
 	 * 
 	 * @param httpRequest the incoming HttpServletRequest to process
 	 */
-	public Object processRequest(final HttpServletRequest httpRequest) {
+	public RequestResponse processRequest(final HttpServletRequest httpRequest) {
 		try {
 			return apiDefinition.processRequest(httpRequest);
 		} catch (RequestNotFoundException ex) {

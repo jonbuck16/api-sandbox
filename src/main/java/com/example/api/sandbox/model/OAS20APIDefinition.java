@@ -1,21 +1,28 @@
 package com.example.api.sandbox.model;
 
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import javax.servlet.http.HttpServletRequest;
 
-import org.apache.jena.ext.com.google.common.collect.ImmutableMap;
 import org.dizitart.no2.Nitrite;
+import org.dizitart.no2.objects.ObjectRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 
 import com.example.api.sandbox.exception.DefinitionNotFoundException;
 import com.example.api.sandbox.exception.InvalidInputException;
 import com.example.api.sandbox.exception.RequestNotFoundException;
 import com.example.api.sandbox.utils.SwaggerPathUtils;
 import com.google.gson.Gson;
+import com.google.gson.JsonIOException;
+import com.google.gson.JsonSyntaxException;
 
 import io.swagger.models.HttpMethod;
 import io.swagger.models.Operation;
@@ -48,7 +55,7 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
 	 * 
 	 */
 	@Override
-	public Object processRequest(final HttpServletRequest httpServletRequest) throws RequestNotFoundException {
+	public RequestResponse processRequest(final HttpServletRequest httpServletRequest) throws RequestNotFoundException {
 		if (swagger.getPaths().isEmpty()) {
 			throw new DefinitionNotFoundException();
 		}
@@ -93,8 +100,18 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
 	 * @param httpServletRequest
 	 * @param operation
 	 */
-	private Object createResponse(HttpServletRequest httpServletRequest, Operation operation) {
-		return ImmutableMap.of("result", "create"); 
+	@SuppressWarnings("rawtypes")
+	private RequestResponse createResponse(HttpServletRequest httpServletRequest, Operation operation) {
+		try {
+			Map<?, ?> data = new Gson().fromJson(
+					new InputStreamReader(httpServletRequest.getInputStream(), StandardCharsets.UTF_8), Map.class);
+			ObjectRepository<Map> repository = database.getRepository(Map.class);
+			repository.insert(data);
+			return RequestResponse.builder().data(data).httpStatus(HttpStatus.CREATED).build();
+		} catch (JsonSyntaxException | JsonIOException | IOException e) {
+			log.atSevere().log(e.getMessage());
+		}
+		return RequestResponse.EMPTY;
 	}
 
 	/**
@@ -102,8 +119,8 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
 	 * @param httpServletRequest
 	 * @param operation
 	 */
-	private Object updateResponse(HttpServletRequest httpServletRequest, Operation operation) {
-		return ImmutableMap.of("result", "update");
+	private RequestResponse updateResponse(HttpServletRequest httpServletRequest, Operation operation) {
+		return RequestResponse.EMPTY;
 	}
 
 	/**
@@ -111,8 +128,8 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
 	 * @param httpServletRequest
 	 * @param operation
 	 */
-	private Object retrieveResponse(HttpServletRequest httpServletRequest, Operation operation) {
-		return ImmutableMap.of("result", "get");
+	private RequestResponse retrieveResponse(HttpServletRequest httpServletRequest, Operation operation) {
+		return RequestResponse.EMPTY;
 	}
 
 	/**

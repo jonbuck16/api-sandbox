@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.api.sandbox.model.RequestResponse;
 import com.example.api.sandbox.service.DefinitionService;
 
 import lombok.extern.flogger.Flogger;
@@ -73,9 +74,9 @@ public class RequestController {
 	 */
 	private ResponseEntity<?> handleRequest(final HttpServletRequest httpServletRequest) {
 		log.at(Level.INFO).log("Processing incoming request [%s] %s", httpServletRequest.getMethod(), httpServletRequest.getRequestURI());
-		final Object response = definitionsService.processRequest(httpServletRequest);
+		final RequestResponse response = definitionsService.processRequest(httpServletRequest);
 		log.at(Level.INFO).log("Request [%s] %s processed successfully", httpServletRequest.getMethod(), httpServletRequest.getRequestURI());
-		return ResponseEntity.ok(response);		
+		return new ResponseEntity<>(response.getData(), response.getHttpStatus());
 	}
 
 }

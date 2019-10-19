@@ -23,9 +23,8 @@ public class OAS30APIDefinition extends AbstractAPIDefinition {
 	}
 
 	@Override
-	public Object processRequest(HttpServletRequest httpServletRequest) throws RequestNotFoundException {
-		// TODO Auto-generated method stub
-		return null;
+	public RequestResponse processRequest(HttpServletRequest httpServletRequest) throws RequestNotFoundException {
+		return RequestResponse.EMPTY;
 	}
 
 }

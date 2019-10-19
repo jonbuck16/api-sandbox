@@ -17,6 +17,6 @@ public interface APIDefinition {
 	 * @param httpRequest
 	 * @throws DefinitionNotFoundException
 	 */
-	Object processRequest(final HttpServletRequest httpServletRequest) throws RequestNotFoundException;
+	RequestResponse processRequest(final HttpServletRequest httpServletRequest) throws RequestNotFoundException;
 	
 }
