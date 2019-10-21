@@ -8,6 +8,7 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.CompletableFuture;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -55,7 +56,8 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
 	 * 
 	 */
 	@Override
-	public RequestResponse processRequest(final HttpServletRequest httpServletRequest) throws RequestNotFoundException {
+	public CompletableFuture<RequestResponse> processRequest(final HttpServletRequest httpServletRequest)
+			throws RequestNotFoundException {
 		if (swagger.getPaths().isEmpty()) {
 			throw new DefinitionNotFoundException();
 		}
@@ -101,17 +103,19 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
 	 * @param operation
 	 */
 	@SuppressWarnings("rawtypes")
-	private RequestResponse createResponse(HttpServletRequest httpServletRequest, Operation operation) {
+	private CompletableFuture<RequestResponse> createResponse(HttpServletRequest httpServletRequest,
+			Operation operation) {
 		try {
 			Map<?, ?> data = new Gson().fromJson(
 					new InputStreamReader(httpServletRequest.getInputStream(), StandardCharsets.UTF_8), Map.class);
 			ObjectRepository<Map> repository = database.getRepository(Map.class);
 			repository.insert(data);
-			return RequestResponse.builder().data(data).httpStatus(HttpStatus.CREATED).build();
+			return CompletableFuture
+					.completedFuture(RequestResponse.builder().data(data).httpStatus(HttpStatus.CREATED).build());
 		} catch (JsonSyntaxException | JsonIOException | IOException e) {
 			log.atSevere().log(e.getMessage());
 		}
-		return RequestResponse.EMPTY;
+		return CompletableFuture.completedFuture(RequestResponse.EMPTY);
 	}
 
 	/**
@@ -119,8 +123,8 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
 	 * @param httpServletRequest
 	 * @param operation
 	 */
-	private RequestResponse updateResponse(HttpServletRequest httpServletRequest, Operation operation) {
-		return RequestResponse.EMPTY;
+	private CompletableFuture<RequestResponse> updateResponse(HttpServletRequest httpServletRequest, Operation operation) {
+		return CompletableFuture.completedFuture(RequestResponse.EMPTY);
 	}
 
 	/**
@@ -128,8 +132,8 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
 	 * @param httpServletRequest
 	 * @param operation
 	 */
-	private RequestResponse retrieveResponse(HttpServletRequest httpServletRequest, Operation operation) {
-		return RequestResponse.EMPTY;
+	private CompletableFuture<RequestResponse> retrieveResponse(HttpServletRequest httpServletRequest, Operation operation) {
+		return CompletableFuture.completedFuture(RequestResponse.EMPTY);
 	}
 
 	/**

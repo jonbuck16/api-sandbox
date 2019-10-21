@@ -1,5 +1,7 @@
 package com.example.api.sandbox.controller;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 
 import javax.servlet.http.HttpServletRequest;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.api.sandbox.exception.RequestNotProcessedException;
 import com.example.api.sandbox.model.RequestResponse;
 import com.example.api.sandbox.service.DefinitionService;
 
@@ -43,27 +46,27 @@ public class RequestController {
 	
 
 	@GetMapping(value = "/**", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
-	public ResponseEntity<?> handleIncomingGetRequest(final HttpServletRequest httpServletRequest) {
+	public ResponseEntity<?> handleIncomingGetRequest(final HttpServletRequest httpServletRequest) throws Throwable {
 		return handleRequest(httpServletRequest);
 	}
 	
 	@PostMapping(value = "/**", consumes = MediaType.ALL_VALUE, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
-	public ResponseEntity<?> handleIncomingPostRequest(final HttpServletRequest httpServletRequest) {
+	public ResponseEntity<?> handleIncomingPostRequest(final HttpServletRequest httpServletRequest) throws Throwable {
 		return handleRequest(httpServletRequest);
 	}
 	
 	@PutMapping(value = "/**", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
-	public ResponseEntity<?> handleIncomingPutRequest(final HttpServletRequest httpServletRequest) {
+	public ResponseEntity<?> handleIncomingPutRequest(final HttpServletRequest httpServletRequest) throws Throwable {
 		return handleRequest(httpServletRequest);
 	}
 	
 	@PatchMapping(value = "/**", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
-	public ResponseEntity<?> handleIncomingPatchRequest(final HttpServletRequest httpServletRequest) {
+	public ResponseEntity<?> handleIncomingPatchRequest(final HttpServletRequest httpServletRequest) throws Throwable {
 		return handleRequest(httpServletRequest);
 	}
 	
 	@DeleteMapping(value = "/**")
-	public ResponseEntity<?> handleIncomingDeleteRequest(final HttpServletRequest httpServletRequest) {
+	public ResponseEntity<?> handleIncomingDeleteRequest(final HttpServletRequest httpServletRequest) throws Throwable {
 		return handleRequest(httpServletRequest);
 	}
 		
@@ -71,12 +74,22 @@ public class RequestController {
 	 * 
 	 * @param httpServletRequest
 	 * @return
+	 * @throws Throwable 
 	 */
-	private ResponseEntity<?> handleRequest(final HttpServletRequest httpServletRequest) {
+	private ResponseEntity<?> handleRequest(final HttpServletRequest httpServletRequest) throws Throwable {
 		log.at(Level.INFO).log("Processing incoming request [%s] %s", httpServletRequest.getMethod(), httpServletRequest.getRequestURI());
-		final RequestResponse response = definitionsService.processRequest(httpServletRequest);
-		log.at(Level.INFO).log("Request [%s] %s processed successfully", httpServletRequest.getMethod(), httpServletRequest.getRequestURI());
-		return new ResponseEntity<>(response.getData(), response.getHttpStatus());
+		final CompletableFuture<RequestResponse> response = definitionsService.processRequest(httpServletRequest);
+		RequestResponse requestResponse;
+		try {
+			requestResponse = response.get();
+			log.at(Level.INFO).log("Request [%s] %s processed successfully", httpServletRequest.getMethod(), httpServletRequest.getRequestURI());
+			return new ResponseEntity<>(requestResponse.getData(), requestResponse.getHttpStatus());
+		} catch (InterruptedException | ExecutionException e) {
+			if (e.getCause() != null) {
+				throw e.getCause();
+			}
+			throw new RequestNotProcessedException();
+		}
 	}
 
 }

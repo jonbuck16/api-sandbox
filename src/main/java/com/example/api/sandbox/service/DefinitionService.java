@@ -1,10 +1,13 @@
 package com.example.api.sandbox.service;
 
+import java.util.concurrent.CompletableFuture;
+
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -71,7 +74,8 @@ public class DefinitionService {
 	 * 
 	 * @param httpRequest the incoming HttpServletRequest to process
 	 */
-	public RequestResponse processRequest(final HttpServletRequest httpRequest) {
+	@Async(value = "RequestExecutor")
+	public CompletableFuture<RequestResponse> processRequest(final HttpServletRequest httpRequest) {
 		try {
 			return apiDefinition.processRequest(httpRequest);
 		} catch (RequestNotFoundException ex) {

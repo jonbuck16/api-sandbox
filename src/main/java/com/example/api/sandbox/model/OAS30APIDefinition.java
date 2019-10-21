@@ -1,5 +1,7 @@
 package com.example.api.sandbox.model;
 
+import java.util.concurrent.CompletableFuture;
+
 import javax.servlet.http.HttpServletRequest;
 
 import com.example.api.sandbox.exception.RequestNotFoundException;
@@ -23,8 +25,8 @@ public class OAS30APIDefinition extends AbstractAPIDefinition {
 	}
 
 	@Override
-	public RequestResponse processRequest(HttpServletRequest httpServletRequest) throws RequestNotFoundException {
-		return RequestResponse.EMPTY;
+	public CompletableFuture<RequestResponse> processRequest(HttpServletRequest httpServletRequest) throws RequestNotFoundException {
+		return CompletableFuture.completedFuture(RequestResponse.EMPTY);
 	}
 
 }

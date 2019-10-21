@@ -1,5 +1,7 @@
 package com.example.api.sandbox.model;
 
+import java.util.concurrent.CompletableFuture;
+
 import javax.servlet.http.HttpServletRequest;
 
 import com.example.api.sandbox.exception.DefinitionNotFoundException;
@@ -13,10 +15,11 @@ import com.example.api.sandbox.exception.RequestNotFoundException;
 public interface APIDefinition {
 
 	/**
-	 *  
+	 * 
 	 * @param httpRequest
 	 * @throws DefinitionNotFoundException
 	 */
-	RequestResponse processRequest(final HttpServletRequest httpServletRequest) throws RequestNotFoundException;
-	
+	CompletableFuture<RequestResponse> processRequest(final HttpServletRequest httpServletRequest)
+			throws RequestNotFoundException;
+
 }

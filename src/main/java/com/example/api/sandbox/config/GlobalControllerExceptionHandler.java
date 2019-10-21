@@ -13,6 +13,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 import com.example.api.sandbox.exception.InvalidInputException;
 import com.example.api.sandbox.exception.RequestNotFoundException;
+import com.example.api.sandbox.exception.RequestNotProcessedException;
 import com.example.api.sandbox.model.ApiError;
 import com.example.api.sandbox.model.ApiSubError;
 import com.example.api.sandbox.model.ApiValidationError;
@@ -33,6 +34,11 @@ public class GlobalControllerExceptionHandler extends ResponseEntityExceptionHan
 		ex.getMissingParameters().forEach(s -> subErrors.add(new ApiValidationError(s, "Value missing!")));
 		apiError.setSubErrors(subErrors);
 		return buildResponseEntity(apiError);
+	}
+	
+	@ExceptionHandler(RequestNotProcessedException.class)
+	protected ResponseEntity<Object> handleRequestNotProcessedException(RequestNotFoundException ex) {
+		return buildResponseEntity(new ApiError(HttpStatus.INTERNAL_SERVER_ERROR, "Request not processed!", ex));
 	}
 	
 	private ResponseEntity<Object> buildResponseEntity(ApiError apiError) {
