@@ -8,6 +8,7 @@ import com.example.api.sandbox.exception.RequestNotFoundException;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import lombok.Getter;
+import lombok.Setter;
 
 /**
  * 
@@ -19,9 +20,12 @@ public class OAS30APIDefinition extends AbstractAPIDefinition {
 	@Getter
 	private OpenAPI openAPI;
 
-	public OAS30APIDefinition(final OpenAPI openApi) {
+	@Setter
+	@Getter
+	private OpenAPI openApi;
+	
+	public OAS30APIDefinition() {
 		super(ModelType.OAS3);
-		this.openAPI = openApi;
 	}
 
 	@Override

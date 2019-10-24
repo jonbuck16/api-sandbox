@@ -5,7 +5,9 @@ import java.util.concurrent.CompletableFuture;
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -35,12 +37,15 @@ public class DefinitionService {
 	@Value("${definitions.directory}")
 	private String definitionDirectory;
 
+	@Autowired
+	private ApplicationContext applicationContext;
+
 	@PostConstruct
 	public void initialise() {
 		try {
 			log.atInfo().log("Looking for API definitions...");
-			this.apiDefinition = DefinitionFactory.builder().definitionDir(definitionDirectory).build()
-					.getDefinitionReader().parse();
+			this.apiDefinition = DefinitionFactory.builder().definitionDir(definitionDirectory)
+					.applicationContext(applicationContext).build().getDefinitionReader().parse();
 			log.atInfo().log("API definition(s) parsed successfully...");
 		} catch (DefinitionParsingException e) {
 			log.atSevere().log("API definition(s) failed to parse!");

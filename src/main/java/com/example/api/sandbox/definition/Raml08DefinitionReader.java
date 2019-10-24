@@ -1,7 +1,5 @@
 package com.example.api.sandbox.definition;
 
-import java.io.File;
-
 import com.example.api.sandbox.exception.DefinitionParsingException;
 import com.example.api.sandbox.model.AbstractAPIDefinition;
 
@@ -12,10 +10,6 @@ import com.example.api.sandbox.model.AbstractAPIDefinition;
  *
  */
 public class Raml08DefinitionReader extends AbstractDefinitionReader {
-
-	public Raml08DefinitionReader(final File definitionFile) {
-		super(definitionFile);
-	}
 
 	@Override
 	public AbstractAPIDefinition parse() throws DefinitionParsingException {

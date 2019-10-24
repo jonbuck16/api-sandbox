@@ -13,7 +13,9 @@ import java.util.concurrent.CompletableFuture;
 import javax.servlet.http.HttpServletRequest;
 
 import org.dizitart.no2.Nitrite;
+import org.dizitart.no2.objects.Cursor;
 import org.dizitart.no2.objects.ObjectRepository;
+import org.dizitart.no2.objects.filters.ObjectFilters;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 
@@ -31,6 +33,7 @@ import io.swagger.models.Path;
 import io.swagger.models.Swagger;
 import io.swagger.models.parameters.Parameter;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.flogger.Flogger;
 
 /**
@@ -45,11 +48,11 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
 	private Nitrite database;
 
 	@Getter
+	@Setter
 	private Swagger swagger;
 
-	public OAS20APIDefinition(final Swagger swagger) {
+	public OAS20APIDefinition() {
 		super(ModelType.OAS2);
-		this.swagger = swagger;
 	}
 
 	/**
@@ -123,7 +126,20 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
 	 * @param httpServletRequest
 	 * @param operation
 	 */
+	@SuppressWarnings("rawtypes")
 	private CompletableFuture<RequestResponse> updateResponse(HttpServletRequest httpServletRequest, Operation operation) {
+		try {
+			
+			ObjectRepository<Map> repository = database.getRepository(Map.class);
+
+			Cursor<Map> results = repository.find(ObjectFilters.and(ObjectFilters.eq("id", 0)));
+			
+			return CompletableFuture
+					.completedFuture(RequestResponse.builder().data(results).httpStatus(HttpStatus.CREATED).build());
+		
+		} catch (JsonSyntaxException | JsonIOException e) {
+			log.atSevere().log(e.getMessage());
+		}
 		return CompletableFuture.completedFuture(RequestResponse.EMPTY);
 	}
 
@@ -133,6 +149,18 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
 	 * @param operation
 	 */
 	private CompletableFuture<RequestResponse> retrieveResponse(HttpServletRequest httpServletRequest, Operation operation) {
+		try {
+			
+			ObjectRepository<Map> repository = database.getRepository(Map.class);
+
+			Cursor<Map> results = repository.find(ObjectFilters.and(ObjectFilters.eq("status", "available")));
+			
+			return CompletableFuture
+					.completedFuture(RequestResponse.builder().data(results).httpStatus(HttpStatus.CREATED).build());
+		
+		} catch (JsonSyntaxException | JsonIOException e) {
+			log.atSevere().log(e.getMessage());
+		}
 		return CompletableFuture.completedFuture(RequestResponse.EMPTY);
 	}
 

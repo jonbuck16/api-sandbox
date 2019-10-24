@@ -16,15 +16,13 @@ public abstract class AbstractDefinitionReader implements DefinitionReader {
 	@Setter
 	protected File definitionFile;
 
-	public AbstractDefinitionReader(final File definitionFile) {
+	public AbstractDefinitionReader() {
 		super();
-		this.definitionFile = definitionFile;
 	}
 
 	@Override
 	public String toString() {
 		return definitionFile.getName();
 	}
-	
 	
 }

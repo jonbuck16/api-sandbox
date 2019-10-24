@@ -7,6 +7,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.logging.Level;
 
+import org.springframework.context.ApplicationContext;
+
 import com.example.api.sandbox.exception.DefinitionParsingException;
 import com.google.common.io.Files;
 
@@ -30,6 +32,8 @@ public class DefinitionFactory {
 	@Getter
 	private String definitionDir;
 
+	private ApplicationContext applicationContext;
+
 	/**
 	 * Returns the appropriate reader for the API definition file we find in the
 	 * configuration directory.
@@ -52,13 +56,25 @@ public class DefinitionFactory {
 				if (allowableFile(file)) {
 					final String firstLine = Files.asCharSource(file, StandardCharsets.UTF_8).readFirstLine();
 					if (firstLine.contains("#%RAML 0.8")) {
-						apiFiles.add(new Raml08DefinitionReader(file));
+						DefinitionReader raml08DefinitionReader = (DefinitionReader) applicationContext
+								.getBean("Raml08Reader");
+						raml08DefinitionReader.setDefinitionFile(file);
+						apiFiles.add(raml08DefinitionReader);
 					} else if (firstLine.contains("#%RAML 1.0")) {
-						apiFiles.add(new Raml10DefinitionReader(file));
+						DefinitionReader raml10DefinitionReader = (DefinitionReader) applicationContext
+								.getBean("Raml10Reader");
+						raml10DefinitionReader.setDefinitionFile(file);
+						apiFiles.add(raml10DefinitionReader);
 					} else if (firstLine.contains("swagger: \"2")) {
-						apiFiles.add(new Oas20DefinitionReader(file));
+						DefinitionReader oas20DefinitionReader = (DefinitionReader) applicationContext
+								.getBean("Oas20Reader");
+						oas20DefinitionReader.setDefinitionFile(file);
+						apiFiles.add(oas20DefinitionReader);
 					} else if (firstLine.contains("openapi: \"3")) {
-						apiFiles.add(new Oas30DefinitionReader(file));
+						DefinitionReader oas30DefinitionReader = (DefinitionReader) applicationContext
+								.getBean("Oas30Reader");
+						oas30DefinitionReader.setDefinitionFile(file);
+						apiFiles.add(oas30DefinitionReader);
 					} else {
 						log.at(Level.WARNING).log("%s is not an API file or not a file that we support, ignoring...",
 								file);
