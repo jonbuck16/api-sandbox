@@ -127,16 +127,17 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
 	 * @param operation
 	 */
 	@SuppressWarnings("rawtypes")
-	private CompletableFuture<RequestResponse> updateResponse(HttpServletRequest httpServletRequest, Operation operation) {
+	private CompletableFuture<RequestResponse> updateResponse(HttpServletRequest httpServletRequest,
+			Operation operation) {
 		try {
-			
+
 			ObjectRepository<Map> repository = database.getRepository(Map.class);
 
 			Cursor<Map> results = repository.find(ObjectFilters.and(ObjectFilters.eq("id", 0)));
-			
+
 			return CompletableFuture
 					.completedFuture(RequestResponse.builder().data(results).httpStatus(HttpStatus.CREATED).build());
-		
+
 		} catch (JsonSyntaxException | JsonIOException e) {
 			log.atSevere().log(e.getMessage());
 		}
@@ -148,16 +149,19 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
 	 * @param httpServletRequest
 	 * @param operation
 	 */
-	private CompletableFuture<RequestResponse> retrieveResponse(HttpServletRequest httpServletRequest, Operation operation) {
+	@SuppressWarnings("rawtypes")
+	private CompletableFuture<RequestResponse> retrieveResponse(HttpServletRequest httpServletRequest,
+			Operation operation) {
 		try {
-			
 			ObjectRepository<Map> repository = database.getRepository(Map.class);
-
 			Cursor<Map> results = repository.find(ObjectFilters.and(ObjectFilters.eq("status", "available")));
-			
-			return CompletableFuture
-					.completedFuture(RequestResponse.builder().data(results).httpStatus(HttpStatus.CREATED).build());
-		
+			if (results.size() > 0) {
+				return CompletableFuture.completedFuture(
+						RequestResponse.builder().data(results).httpStatus(HttpStatus.CREATED).build());
+			} else {
+				return CompletableFuture
+						.completedFuture(RequestResponse.builder().httpStatus(HttpStatus.NOT_FOUND).build());
+			}
 		} catch (JsonSyntaxException | JsonIOException e) {
 			log.atSevere().log(e.getMessage());
 		}
