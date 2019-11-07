@@ -157,7 +157,7 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
 			Cursor<Map> results = repository.find(ObjectFilters.and(ObjectFilters.eq("status", "available")));
 			if (results.size() > 0) {
 				return CompletableFuture.completedFuture(
-						RequestResponse.builder().data(results).httpStatus(HttpStatus.CREATED).build());
+						RequestResponse.builder().data(results).httpStatus(HttpStatus.OK).build());
 			} else {
 				return CompletableFuture
 						.completedFuture(RequestResponse.builder().httpStatus(HttpStatus.NOT_FOUND).build());
