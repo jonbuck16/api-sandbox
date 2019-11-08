@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.LinkedList;
 import java.util.List;
@@ -33,6 +34,7 @@ import io.swagger.models.Operation;
 import io.swagger.models.Path;
 import io.swagger.models.Swagger;
 import io.swagger.models.parameters.Parameter;
+import io.swagger.models.parameters.PathParameter;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.flogger.Flogger;
@@ -90,7 +92,7 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
 						return updateResponse(httpServletRequest, operation);
 					} else {
 						log.atInfo().log("Retrieving data....");
-						return retrieveResponse(httpServletRequest, operation);
+						return retrieveResponse(entry.getKey(), httpServletRequest, operation);
 					}
 
 				}
@@ -143,21 +145,27 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
 	}
 
 	/**
+	 * Retrieve data from the in memory database based on the API operation and
+	 * incoming request.
 	 * 
-	 * @param httpServletRequest
-	 * @param operation
+	 * @param path               the API path definition
+	 * @param httpServletRequest the incoming HTTP request
+	 * @param operation          the API operation
 	 */
 	@SuppressWarnings("rawtypes")
-	private CompletableFuture<RequestResponse> retrieveResponse(HttpServletRequest httpServletRequest,
-			Operation operation) {
+	private CompletableFuture<RequestResponse> retrieveResponse(final String path,
+			HttpServletRequest httpServletRequest, Operation operation) {
 		ObjectRepository<Map> repository = database.getRepository(Map.class);
-
-		List<ObjectFilter> filters = new LinkedList<>();
-		operation.getParameters()
-				.forEach(parameter -> filters.add(constructObjectFilter(parameter, httpServletRequest)));
-
-		Cursor<Map> results = repository.find(ObjectFilters.and(filters.toArray(new ObjectFilter[filters.size()])));
-		if (results.size() > 0) {
+		Cursor<Map> results = null;
+		if (operation.getParameters().isEmpty()) {
+			results = repository.find();
+		} else {
+			List<ObjectFilter> filters = new LinkedList<>();
+			operation.getParameters().forEach(
+					parameter -> filters.add(constructObjectFilter(path, operation, parameter, httpServletRequest)));
+			results = repository.find(ObjectFilters.and(filters.toArray(new ObjectFilter[filters.size()])));
+		}
+		if (results != null && results.size() > 0) {
 			return CompletableFuture
 					.completedFuture(RequestResponse.builder().data(results).httpStatus(HttpStatus.OK).build());
 		} else {
@@ -166,8 +174,57 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
 		}
 	}
 
-	private ObjectFilter constructObjectFilter(Parameter parameter, HttpServletRequest httpServletRequest) {
-		return ObjectFilters.eq(parameter.getName(), httpServletRequest.getParameter(parameter.getName()));
+	/**
+	 * Retrieves the value for the request for the specified value.
+	 * 
+	 * @param operation          the operation involved
+	 * @param parameter          the parameter object from the API definition
+	 * @param httpServletRequest in incoming request from which to try and get data
+	 * @return an ObjectFilter
+	 */
+	private ObjectFilter constructObjectFilter(final String path, final Operation operation, final Parameter parameter,
+			final HttpServletRequest httpServletRequest) {
+		Object value = null;
+		switch (parameter.getIn()) {
+		case "query":
+			value = httpServletRequest.getParameter(parameter.getName());
+			break;
+		case "header":
+			value = httpServletRequest.getHeader(parameter.getName());
+			break;
+		default: // path
+			value = handlePathValue(path, parameter, httpServletRequest);
+		}
+		return ObjectFilters.eq(parameter.getName(), value);
+	}
+
+	/**
+	 * Extracts a path variable value from the incoming request.
+	 * 
+	 * @param path
+	 * @param parameter
+	 * @param httpServletRequest
+	 * @return
+	 */
+	private Object handlePathValue(final String path, final Parameter parameter,
+			final HttpServletRequest httpServletRequest) {
+		Object value;
+		List<String> pathParts = Arrays.asList(path.split("/"));
+		List<String> requestParts = Arrays.asList(httpServletRequest.getRequestURI().split("/"));
+		PathParameter pathParameter = (PathParameter) parameter;
+		switch (pathParameter.getType()) {
+		case "boolean":
+			value = Boolean.class
+					.cast(requestParts.get(pathParts.indexOf(String.format("{%s}", parameter.getName()))));
+		case "integer":
+			final int indexValue = pathParts.indexOf(String.format("{%s}", parameter.getName()));
+			final String rawValue = requestParts.get(indexValue);
+			value = Integer.valueOf(rawValue);
+			break;
+		default:
+			value = requestParts.get(pathParts.indexOf(String.format("{%s}", parameter.getName())));
+		}
+		return value;
 	}
 
 	/**
