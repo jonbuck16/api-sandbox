@@ -5,6 +5,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -14,6 +15,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.dizitart.no2.Nitrite;
 import org.dizitart.no2.objects.Cursor;
+import org.dizitart.no2.objects.ObjectFilter;
 import org.dizitart.no2.objects.ObjectRepository;
 import org.dizitart.no2.objects.filters.ObjectFilters;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,9 +25,8 @@ import com.example.api.sandbox.exception.DefinitionNotFoundException;
 import com.example.api.sandbox.exception.InvalidInputException;
 import com.example.api.sandbox.exception.RequestNotFoundException;
 import com.example.api.sandbox.utils.SwaggerPathUtils;
-import com.google.gson.Gson;
-import com.google.gson.JsonIOException;
-import com.google.gson.JsonSyntaxException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.swagger.models.HttpMethod;
 import io.swagger.models.Operation;
@@ -109,13 +110,16 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
 	private CompletableFuture<RequestResponse> createResponse(HttpServletRequest httpServletRequest,
 			Operation operation) {
 		try {
-			Map<?, ?> data = new Gson().fromJson(
-					new InputStreamReader(httpServletRequest.getInputStream(), StandardCharsets.UTF_8), Map.class);
+			ObjectMapper mapper = new ObjectMapper();
+			Map<String, Object> data = mapper.readValue(
+					new InputStreamReader(httpServletRequest.getInputStream(), StandardCharsets.UTF_8),
+					new TypeReference<Map<String, Object>>() {
+					});
 			ObjectRepository<Map> repository = database.getRepository(Map.class);
 			repository.insert(data);
 			return CompletableFuture
 					.completedFuture(RequestResponse.builder().data(data).httpStatus(HttpStatus.CREATED).build());
-		} catch (JsonSyntaxException | JsonIOException | IOException e) {
+		} catch (IOException e) {
 			log.atSevere().log(e.getMessage());
 		}
 		return CompletableFuture.completedFuture(RequestResponse.EMPTY);
@@ -129,17 +133,11 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
 	@SuppressWarnings("rawtypes")
 	private CompletableFuture<RequestResponse> updateResponse(HttpServletRequest httpServletRequest,
 			Operation operation) {
-		try {
-
-			ObjectRepository<Map> repository = database.getRepository(Map.class);
-
-			Cursor<Map> results = repository.find(ObjectFilters.and(ObjectFilters.eq("id", 0)));
-
+		ObjectRepository<Map> repository = database.getRepository(Map.class);
+		Cursor<Map> results = repository.find(ObjectFilters.and(ObjectFilters.eq("id", 0)));
+		if (results.hasMore()) {
 			return CompletableFuture
 					.completedFuture(RequestResponse.builder().data(results).httpStatus(HttpStatus.CREATED).build());
-
-		} catch (JsonSyntaxException | JsonIOException e) {
-			log.atSevere().log(e.getMessage());
 		}
 		return CompletableFuture.completedFuture(RequestResponse.EMPTY);
 	}
@@ -152,20 +150,24 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
 	@SuppressWarnings("rawtypes")
 	private CompletableFuture<RequestResponse> retrieveResponse(HttpServletRequest httpServletRequest,
 			Operation operation) {
-		try {
-			ObjectRepository<Map> repository = database.getRepository(Map.class);
-			Cursor<Map> results = repository.find(ObjectFilters.and(ObjectFilters.eq("status", "available")));
-			if (results.size() > 0) {
-				return CompletableFuture.completedFuture(
-						RequestResponse.builder().data(results).httpStatus(HttpStatus.OK).build());
-			} else {
-				return CompletableFuture
-						.completedFuture(RequestResponse.builder().httpStatus(HttpStatus.NOT_FOUND).build());
-			}
-		} catch (JsonSyntaxException | JsonIOException e) {
-			log.atSevere().log(e.getMessage());
+		ObjectRepository<Map> repository = database.getRepository(Map.class);
+
+		List<ObjectFilter> filters = new LinkedList<>();
+		operation.getParameters()
+				.forEach(parameter -> filters.add(constructObjectFilter(parameter, httpServletRequest)));
+
+		Cursor<Map> results = repository.find(ObjectFilters.and(filters.toArray(new ObjectFilter[filters.size()])));
+		if (results.size() > 0) {
+			return CompletableFuture
+					.completedFuture(RequestResponse.builder().data(results).httpStatus(HttpStatus.OK).build());
+		} else {
+			return CompletableFuture
+					.completedFuture(RequestResponse.builder().httpStatus(HttpStatus.NOT_FOUND).build());
 		}
-		return CompletableFuture.completedFuture(RequestResponse.EMPTY);
+	}
+
+	private ObjectFilter constructObjectFilter(Parameter parameter, HttpServletRequest httpServletRequest) {
+		return ObjectFilters.eq(parameter.getName(), httpServletRequest.getParameter(parameter.getName()));
 	}
 
 	/**

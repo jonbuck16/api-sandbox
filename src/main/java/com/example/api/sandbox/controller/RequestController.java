@@ -45,22 +45,22 @@ public class RequestController {
 	private DefinitionService definitionsService;
 	
 
-	@GetMapping(value = "/**", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
+	@GetMapping(value = "/**", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<?> handleIncomingGetRequest(final HttpServletRequest httpServletRequest) throws Throwable {
 		return handleRequest(httpServletRequest);
 	}
 	
-	@PostMapping(value = "/**", consumes = MediaType.ALL_VALUE, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
+	@PostMapping(value = "/**", consumes = MediaType.ALL_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<?> handleIncomingPostRequest(final HttpServletRequest httpServletRequest) throws Throwable {
 		return handleRequest(httpServletRequest);
 	}
 	
-	@PutMapping(value = "/**", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
+	@PutMapping(value = "/**", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<?> handleIncomingPutRequest(final HttpServletRequest httpServletRequest) throws Throwable {
 		return handleRequest(httpServletRequest);
 	}
 	
-	@PatchMapping(value = "/**", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
+	@PatchMapping(value = "/**", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<?> handleIncomingPatchRequest(final HttpServletRequest httpServletRequest) throws Throwable {
 		return handleRequest(httpServletRequest);
 	}
