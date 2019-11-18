@@ -5,7 +5,7 @@ package com.example.api.sandbox.exception;
  * 
  * @since v1
  */
-public class DefinitionNotFoundException extends RuntimeException {
+public class PathNotFoundException extends RuntimeException {
 
 	/**
 	 * 

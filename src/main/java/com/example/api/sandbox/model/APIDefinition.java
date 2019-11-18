@@ -4,7 +4,7 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.servlet.http.HttpServletRequest;
 
-import com.example.api.sandbox.exception.DefinitionNotFoundException;
+import com.example.api.sandbox.exception.PathNotFoundException;
 import com.example.api.sandbox.exception.RequestNotFoundException;
 
 /**
@@ -17,7 +17,7 @@ public interface APIDefinition {
 	/**
 	 * 
 	 * @param httpRequest
-	 * @throws DefinitionNotFoundException
+	 * @throws PathNotFoundException
 	 */
 	CompletableFuture<RequestResponse> processRequest(final HttpServletRequest httpServletRequest)
 			throws RequestNotFoundException;

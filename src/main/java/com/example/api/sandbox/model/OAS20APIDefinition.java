@@ -22,7 +22,7 @@ import org.dizitart.no2.objects.filters.ObjectFilters;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 
-import com.example.api.sandbox.exception.DefinitionNotFoundException;
+import com.example.api.sandbox.exception.PathNotFoundException;
 import com.example.api.sandbox.exception.InvalidInputException;
 import com.example.api.sandbox.exception.RequestNotFoundException;
 import com.example.api.sandbox.utils.SwaggerPathUtils;
@@ -47,236 +47,222 @@ import lombok.extern.flogger.Flogger;
 @Flogger
 public class OAS20APIDefinition extends AbstractAPIDefinition {
 
-	@Autowired
-	private Nitrite database;
+    @Autowired
+    private Nitrite database;
 
-	@Getter
-	@Setter
-	private Swagger swagger;
+    @Getter
+    @Setter
+    private Swagger swagger;
 
-	public OAS20APIDefinition() {
-		super(ModelType.OAS2);
-	}
+    public OAS20APIDefinition() {
+        super(ModelType.OAS2);
+    }
 
-	/**
-	 * 
-	 */
-	@Override
-	public CompletableFuture<RequestResponse> processRequest(final HttpServletRequest httpServletRequest)
-			throws RequestNotFoundException {
-		if (swagger.getPaths().isEmpty()) {
-			throw new DefinitionNotFoundException();
-		}
+    /**
+     * Retrieves the value for the request for the specified value.
+     * 
+     * @param operation          the operation involved
+     * @param parameter          the parameter object from the API definition
+     * @param httpServletRequest in incoming request from which to try and get data
+     * @return an ObjectFilter
+     */
+    private ObjectFilter constructObjectFilter(final String path, final Operation operation, final Parameter parameter,
+            final HttpServletRequest httpServletRequest) {
+        Object value = null;
+        switch (parameter.getIn()) {
+        case "query":
+            value = httpServletRequest.getParameter(parameter.getName());
+            break;
+        case "header":
+            value = httpServletRequest.getHeader(parameter.getName());
+            break;
+        default: // path
+            value = handlePathValue(path, parameter, httpServletRequest);
+        }
+        return ObjectFilters.eq(parameter.getName(), value);
+    }
 
-		for (Entry<String, Path> entry : swagger.getPaths().entrySet()) {
-			if (SwaggerPathUtils.pathToRegex(entry.getValue(), entry.getKey())
-					.matcher(httpServletRequest.getRequestURI()).matches()) {
-				final HttpMethod httpMethod = HttpMethod.valueOf(httpServletRequest.getMethod());
-				if (entry.getValue().getOperationMap().containsKey(httpMethod)) {
-					log.atInfo().log("Request matched to path [%s] %s", httpMethod.name(), entry.getKey());
+    /**
+     * Extracts a path variable value from the incoming request.
+     * 
+     * @param path
+     * @param parameter
+     * @param httpServletRequest
+     * @return
+     */
+    private Object handlePathValue(final String path, final Parameter parameter, final HttpServletRequest httpServletRequest) {
+        Object value;
+        List<String> pathParts = Arrays.asList(path.split("/"));
+        List<String> requestParts = Arrays.asList(httpServletRequest.getRequestURI().split("/"));
+        PathParameter pathParameter = (PathParameter) parameter;
+        switch (pathParameter.getType()) {
+        case "boolean":
+            value = Boolean.class.cast(requestParts.get(pathParts.indexOf(String.format("{%s}", parameter.getName()))));
+        case "integer":
+            final int indexValue = pathParts.indexOf(String.format("{%s}", parameter.getName()));
+            final String rawValue = requestParts.get(indexValue);
+            value = Integer.valueOf(rawValue);
+            break;
+        default:
+            value = requestParts.get(pathParts.indexOf(String.format("{%s}", parameter.getName())));
+        }
+        return value;
+    }
 
-					// Get Operation from the definition
-					Operation operation = entry.getValue().getOperationMap().get(httpMethod);
+    /**
+     * Retrieve data from the in memory database based on the API operation and
+     * incoming request.
+     * 
+     * @param path               the API path definition
+     * @param operation          the API operation
+     * @param httpServletRequest the incoming HTTP request
+     */
+    @SuppressWarnings("rawtypes")
+    private CompletableFuture<RequestResponse> processGet(final String path, Operation operation,
+            HttpServletRequest httpServletRequest) {
+        ObjectRepository<Map> repository = database.getRepository(Map.class);
+        Cursor<Map> results = null;
+        if (operation.getParameters().isEmpty()) {
+            results = repository.find();
+        } else {
+            List<ObjectFilter> filters = new LinkedList<>();
+            operation.getParameters()
+                    .forEach(parameter -> filters.add(constructObjectFilter(path, operation, parameter, httpServletRequest)));
+            results = repository.find(ObjectFilters.and(filters.toArray(new ObjectFilter[filters.size()])));
+        }
+        if (results != null && results.size() > 0) {
+            return CompletableFuture.completedFuture(RequestResponse.builder().data(results).httpStatus(HttpStatus.OK).build());
+        } else {
+            return CompletableFuture.completedFuture(RequestResponse.builder().httpStatus(HttpStatus.NOT_FOUND).build());
+        }
+    }
 
-					// Validate that the data supplied to the application is valid for the request
-					validateInput(httpServletRequest, operation);
+    /**
+     * 
+     * @param httpServletRequest
+     * @param operation
+     */
+    @SuppressWarnings("rawtypes")
+    private CompletableFuture<RequestResponse> processPst(HttpServletRequest httpServletRequest, Operation operation) {
+        try (InputStreamReader inputStreamReader = new InputStreamReader(httpServletRequest.getInputStream(),
+                StandardCharsets.UTF_8)) {
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, Object> data = mapper.readValue(inputStreamReader, new TypeReference<Map<String, Object>>() {});
+            ObjectRepository<Map> repository = database.getRepository(Map.class);
+            repository.insert(data);
+            return CompletableFuture.completedFuture(RequestResponse.builder().data(data).httpStatus(HttpStatus.CREATED).build());
+        } catch (IOException e) {
+            log.atSevere().log(e.getMessage());
+        }
+        return CompletableFuture.completedFuture(RequestResponse.EMPTY);
+    }
 
-					// Generate the response data, this will either be generated from the request
-					// and persisted in the internal database, an entry updated from the request and
-					// persisted, or just simply retrieved from the database...
-					if (httpMethod.equals(HttpMethod.POST)) {
-						log.atInfo().log("Persisting data...");
-						return createResponse(httpServletRequest, operation);
-					} else if (httpMethod.equals(HttpMethod.PUT)) {
-						log.atInfo().log("Updating data...");
-						return updateResponse(httpServletRequest, operation);
-					} else {
-						log.atInfo().log("Retrieving data....");
-						return retrieveResponse(entry.getKey(), httpServletRequest, operation);
-					}
+    /**
+     * 
+     * @param httpServletRequest
+     * @param operation
+     */
+    @SuppressWarnings("rawtypes")
+    private CompletableFuture<RequestResponse> processPut(HttpServletRequest httpServletRequest, Operation operation) {
+        ObjectRepository<Map> repository = database.getRepository(Map.class);
+        Cursor<Map> results = repository.find(ObjectFilters.and(ObjectFilters.eq("id", 0)));
+        if (results.hasMore()) {
+            return CompletableFuture
+                    .completedFuture(RequestResponse.builder().data(results).httpStatus(HttpStatus.CREATED).build());
+        }
+        return CompletableFuture.completedFuture(RequestResponse.EMPTY);
+    }
 
-				}
-			}
-		}
+    /**
+     * 
+     */
+    @Override
+    public CompletableFuture<RequestResponse> processRequest(final HttpServletRequest httpServletRequest)
+            throws RequestNotFoundException {
+        if (swagger.getPaths().isEmpty()) {
+            throw new PathNotFoundException();
+        }
 
-		throw new RequestNotFoundException(String.format("The request [%s] %s cannot be found",
-				httpServletRequest.getMethod(), httpServletRequest.getRequestURI()));
-	}
+        for (Entry<String, Path> entry : swagger.getPaths().entrySet()) {
+            final HttpMethod httpMethod = HttpMethod.valueOf(httpServletRequest.getMethod());
+            if (SwaggerPathUtils.pathToRegex(entry.getKey(), entry.getValue(), httpMethod).matcher(httpServletRequest.getRequestURI())
+                    .matches()) {
+                if (entry.getValue().getOperationMap().containsKey(httpMethod)) {
+                    log.atInfo().log("Request matched to path [%s] %s", httpMethod.name(), entry.getKey());
+                    Operation operation = entry.getValue().getOperationMap().get(httpMethod);
+                    validateOperation(operation, httpServletRequest);
+                    switch (httpMethod) {
+                    case PUT:
+                        return processPut(httpServletRequest, operation);
+                    case POST:
+                        return processPst(httpServletRequest, operation);
+                    case PATCH:
+                        break;
+                    case OPTIONS:
+                        break;
+                    case HEAD:
+                        break;
+                    default:
+                        return processGet(entry.getKey(), operation, httpServletRequest);
+                    }
+                }
+            }
+        }
 
-	/**
-	 * 
-	 * @param httpServletRequest
-	 * @param operation
-	 */
-	@SuppressWarnings("rawtypes")
-	private CompletableFuture<RequestResponse> createResponse(HttpServletRequest httpServletRequest,
-			Operation operation) {
-		try {
-			ObjectMapper mapper = new ObjectMapper();
-			Map<String, Object> data = mapper.readValue(
-					new InputStreamReader(httpServletRequest.getInputStream(), StandardCharsets.UTF_8),
-					new TypeReference<Map<String, Object>>() {
-					});
-			ObjectRepository<Map> repository = database.getRepository(Map.class);
-			repository.insert(data);
-			return CompletableFuture
-					.completedFuture(RequestResponse.builder().data(data).httpStatus(HttpStatus.CREATED).build());
-		} catch (IOException e) {
-			log.atSevere().log(e.getMessage());
-		}
-		return CompletableFuture.completedFuture(RequestResponse.EMPTY);
-	}
+        throw new RequestNotFoundException(String.format("The request [%s] %s cannot be found", httpServletRequest.getMethod(),
+                httpServletRequest.getRequestURI()));
+    }
 
-	/**
-	 * 
-	 * @param httpServletRequest
-	 * @param operation
-	 */
-	@SuppressWarnings("rawtypes")
-	private CompletableFuture<RequestResponse> updateResponse(HttpServletRequest httpServletRequest,
-			Operation operation) {
-		ObjectRepository<Map> repository = database.getRepository(Map.class);
-		Cursor<Map> results = repository.find(ObjectFilters.and(ObjectFilters.eq("id", 0)));
-		if (results.hasMore()) {
-			return CompletableFuture
-					.completedFuture(RequestResponse.builder().data(results).httpStatus(HttpStatus.CREATED).build());
-		}
-		return CompletableFuture.completedFuture(RequestResponse.EMPTY);
-	}
+    /**
+     * Validates that the input is correct
+     * 
+     * @param httpServletRequest
+     * @param operation
+     */
+    private void validateOperation(final Operation operation, final HttpServletRequest httpServletRequest) {
+        // Generate list of parameters to validate against, we will use this list to
+        // 'tick off' which parameters exist in the request and therefore if anything is
+        // left then that is missing
+        final List<String> parametersToValidate = new ArrayList<>();
+        operation.getParameters().forEach(p -> parametersToValidate.add(p.getName()));
 
-	/**
-	 * Retrieve data from the in memory database based on the API operation and
-	 * incoming request.
-	 * 
-	 * @param path               the API path definition
-	 * @param httpServletRequest the incoming HTTP request
-	 * @param operation          the API operation
-	 */
-	@SuppressWarnings("rawtypes")
-	private CompletableFuture<RequestResponse> retrieveResponse(final String path,
-			HttpServletRequest httpServletRequest, Operation operation) {
-		ObjectRepository<Map> repository = database.getRepository(Map.class);
-		Cursor<Map> results = null;
-		if (operation.getParameters().isEmpty()) {
-			results = repository.find();
-		} else {
-			List<ObjectFilter> filters = new LinkedList<>();
-			operation.getParameters().forEach(
-					parameter -> filters.add(constructObjectFilter(path, operation, parameter, httpServletRequest)));
-			results = repository.find(ObjectFilters.and(filters.toArray(new ObjectFilter[filters.size()])));
-		}
-		if (results != null && results.size() > 0) {
-			return CompletableFuture
-					.completedFuture(RequestResponse.builder().data(results).httpStatus(HttpStatus.OK).build());
-		} else {
-			return CompletableFuture
-					.completedFuture(RequestResponse.builder().httpStatus(HttpStatus.NOT_FOUND).build());
-		}
-	}
-
-	/**
-	 * Retrieves the value for the request for the specified value.
-	 * 
-	 * @param operation          the operation involved
-	 * @param parameter          the parameter object from the API definition
-	 * @param httpServletRequest in incoming request from which to try and get data
-	 * @return an ObjectFilter
-	 */
-	private ObjectFilter constructObjectFilter(final String path, final Operation operation, final Parameter parameter,
-			final HttpServletRequest httpServletRequest) {
-		Object value = null;
-		switch (parameter.getIn()) {
-		case "query":
-			value = httpServletRequest.getParameter(parameter.getName());
-			break;
-		case "header":
-			value = httpServletRequest.getHeader(parameter.getName());
-			break;
-		default: // path
-			value = handlePathValue(path, parameter, httpServletRequest);
-		}
-		return ObjectFilters.eq(parameter.getName(), value);
-	}
-
-	/**
-	 * Extracts a path variable value from the incoming request.
-	 * 
-	 * @param path
-	 * @param parameter
-	 * @param httpServletRequest
-	 * @return
-	 */
-	private Object handlePathValue(final String path, final Parameter parameter,
-			final HttpServletRequest httpServletRequest) {
-		Object value;
-		List<String> pathParts = Arrays.asList(path.split("/"));
-		List<String> requestParts = Arrays.asList(httpServletRequest.getRequestURI().split("/"));
-		PathParameter pathParameter = (PathParameter) parameter;
-		switch (pathParameter.getType()) {
-		case "boolean":
-			value = Boolean.class
-					.cast(requestParts.get(pathParts.indexOf(String.format("{%s}", parameter.getName()))));
-		case "integer":
-			final int indexValue = pathParts.indexOf(String.format("{%s}", parameter.getName()));
-			final String rawValue = requestParts.get(indexValue);
-			value = Integer.valueOf(rawValue);
-			break;
-		default:
-			value = requestParts.get(pathParts.indexOf(String.format("{%s}", parameter.getName())));
-		}
-		return value;
-	}
-
-	/**
-	 * Validates that the input is correct
-	 * 
-	 * @param httpServletRequest
-	 * @param operation
-	 */
-	private void validateInput(final HttpServletRequest httpServletRequest, final Operation operation) {
-		// Generate list of parameters to validate against, we will use this list to
-		// 'tick off' which parameters exist in the request and therefore if anything is
-		// left then that is missing
-		final List<String> parametersToValidate = new ArrayList<>();
-		operation.getParameters().forEach(p -> parametersToValidate.add(p.getName()));
-
-		for (Parameter parameter : operation.getParameters()) {
-			if (parameter.getRequired()) {
-				switch (parameter.getIn()) {
-				case "body":
-					// TODO Validate body against the model
-					if (httpServletRequest.getContentLength() > 0) {
-						parametersToValidate.remove(parameter.getName());
-					}
-					break;
-				case "header":
-					Enumeration<String> headerNames = httpServletRequest.getHeaderNames();
-					while (headerNames.hasMoreElements()) {
-						final String headerName = headerNames.nextElement();
-						if (headerName.equals(parameter.getName())) {
-							parametersToValidate.remove(parameter.getName());
-						}
-					}
-					break;
-				case "path":
-					parametersToValidate.remove(parameter.getName());
-					break;
-				default: // formData
-					Enumeration<String> parameterNames = httpServletRequest.getParameterNames();
-					while (parameterNames.hasMoreElements()) {
-						final String parameterName = parameterNames.nextElement();
-						if (parameterName.equals(parameter.getName())) {
-							parametersToValidate.remove(parameter.getName());
-						}
-					}
-				}
-			} else {
-				parametersToValidate.remove(parameter.getName());
-			}
-		}
-		if (parametersToValidate.size() > 0) {
-			throw new InvalidInputException(405, "The request is invalid!", parametersToValidate);
-		}
-	}
+        for (Parameter parameter : operation.getParameters()) {
+            if (parameter.getRequired()) {
+                switch (parameter.getIn()) {
+                case "body":
+                    // TODO Validate body against the model
+                    if (httpServletRequest.getContentLength() > 0) {
+                        parametersToValidate.remove(parameter.getName());
+                    }
+                    break;
+                case "header":
+                    Enumeration<String> headerNames = httpServletRequest.getHeaderNames();
+                    while (headerNames.hasMoreElements()) {
+                        final String headerName = headerNames.nextElement();
+                        if (headerName.equals(parameter.getName())) {
+                            parametersToValidate.remove(parameter.getName());
+                        }
+                    }
+                    break;
+                case "path":
+                    parametersToValidate.remove(parameter.getName());
+                    break;
+                default: // Form Data
+                    Enumeration<String> parameterNames = httpServletRequest.getParameterNames();
+                    while (parameterNames.hasMoreElements()) {
+                        final String parameterName = parameterNames.nextElement();
+                        if (parameterName.equals(parameter.getName())) {
+                            parametersToValidate.remove(parameter.getName());
+                        }
+                    }
+                }
+            } else {
+                parametersToValidate.remove(parameter.getName());
+            }
+        }
+        if (parametersToValidate.size() > 0) {
+            throw new InvalidInputException(400, "The request is invalid!", parametersToValidate);
+        }
+    }
 
 }

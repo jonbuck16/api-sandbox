@@ -52,7 +52,7 @@ public class DefinitionConfig {
 		return new OAS20APIDefinition();
 	}
 	
-	@Bean(name = "Oas30DefinitionReader")
+	@Bean(name = "Oas30Reader")
 	@Scope("prototype")
 	public DefinitionReader oas30DefinitionReader() {
 		return new Oas30DefinitionReader();

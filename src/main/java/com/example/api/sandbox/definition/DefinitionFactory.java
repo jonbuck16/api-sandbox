@@ -70,7 +70,7 @@ public class DefinitionFactory {
 								.getBean("Oas20Reader");
 						oas20DefinitionReader.setDefinitionFile(file);
 						apiFiles.add(oas20DefinitionReader);
-					} else if (firstLine.contains("openapi: \"3")) {
+					} else if (firstLine.contains("openapi: 3")) {
 						DefinitionReader oas30DefinitionReader = (DefinitionReader) applicationContext
 								.getBean("Oas30Reader");
 						oas30DefinitionReader.setDefinitionFile(file);
