@@ -32,39 +32,6 @@ tags:
     url: http://swagger.io
 paths:
   /pet:
-    put:
-      tags:
-      - pet
-      summary: Update an existing pet
-      operationId: updatePet
-      requestBody:
-        description: Pet object that needs to be added to the store
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Pet'
-          application/xml:
-            schema:
-              $ref: '#/components/schemas/Pet'
-        required: true
-      responses:
-        200:
-          description: successfully updated
-          content: {}
-        400:
-          description: Invalid ID supplied
-          content: {}
-        404:
-          description: Pet not found
-          content: {}
-        405:
-          description: Validation exception
-          content: {}
-      security:
-      - petstore_auth:
-        - write:pets
-        - read:pets
-      x-codegen-request-body-name: body
     post:
       tags:
       - pet

@@ -5,7 +5,7 @@ import java.util.concurrent.CompletableFuture;
 import javax.servlet.http.HttpServletRequest;
 
 import com.example.api.sandbox.exception.PathNotFoundException;
-import com.example.api.sandbox.exception.RequestNotFoundException;
+import com.example.api.sandbox.exception.EndpointNotFoundException;
 
 /**
  * 
@@ -20,6 +20,6 @@ public interface APIDefinition {
 	 * @throws PathNotFoundException
 	 */
 	CompletableFuture<RequestResponse> processRequest(final HttpServletRequest httpServletRequest)
-			throws RequestNotFoundException;
+			throws EndpointNotFoundException;
 
 }

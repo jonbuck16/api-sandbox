@@ -24,7 +24,7 @@ import org.springframework.http.HttpStatus;
 
 import com.example.api.sandbox.exception.PathNotFoundException;
 import com.example.api.sandbox.exception.InvalidInputException;
-import com.example.api.sandbox.exception.RequestNotFoundException;
+import com.example.api.sandbox.exception.EndpointNotFoundException;
 import com.example.api.sandbox.utils.SwaggerPathUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -178,7 +178,7 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
      */
     @Override
     public CompletableFuture<RequestResponse> processRequest(final HttpServletRequest httpServletRequest)
-            throws RequestNotFoundException {
+            throws EndpointNotFoundException {
         if (swagger.getPaths().isEmpty()) {
             throw new PathNotFoundException();
         }
@@ -209,7 +209,7 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
             }
         }
 
-        throw new RequestNotFoundException(String.format("The request [%s] %s cannot be found", httpServletRequest.getMethod(),
+        throw new EndpointNotFoundException(String.format("The endpoint [%s] %s cannot be found", httpServletRequest.getMethod(),
                 httpServletRequest.getRequestURI()));
     }
 

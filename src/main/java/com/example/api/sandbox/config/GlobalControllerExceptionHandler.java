@@ -13,7 +13,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 import com.example.api.sandbox.exception.InternalServerException;
 import com.example.api.sandbox.exception.InvalidInputException;
-import com.example.api.sandbox.exception.RequestNotFoundException;
+import com.example.api.sandbox.exception.EndpointNotFoundException;
 import com.example.api.sandbox.exception.RequestNotProcessedException;
 import com.example.api.sandbox.model.ApiError;
 import com.example.api.sandbox.model.ApiSubError;
@@ -23,9 +23,9 @@ import com.example.api.sandbox.model.ApiValidationError;
 @ControllerAdvice
 public class GlobalControllerExceptionHandler extends ResponseEntityExceptionHandler {
 
-	@ExceptionHandler(RequestNotFoundException.class)
-	protected ResponseEntity<Object> handleRequestNotFoundException(RequestNotFoundException ex) {
-		return buildResponseEntity(new ApiError(HttpStatus.NOT_FOUND, "Request not found!", ex));
+	@ExceptionHandler(EndpointNotFoundException.class)
+	protected ResponseEntity<Object> handleRequestNotFoundException(EndpointNotFoundException ex) {
+		return buildResponseEntity(new ApiError(HttpStatus.BAD_REQUEST, "Endpoint Not Found!", ex));
 	}
 
 	@ExceptionHandler(InvalidInputException.class)
@@ -38,8 +38,8 @@ public class GlobalControllerExceptionHandler extends ResponseEntityExceptionHan
 	}
 	
 	@ExceptionHandler(RequestNotProcessedException.class)
-	protected ResponseEntity<Object> handleRequestNotProcessedException(RequestNotFoundException ex) {
-		return buildResponseEntity(new ApiError(HttpStatus.INTERNAL_SERVER_ERROR, "Request not processed!", ex));
+	protected ResponseEntity<Object> handleRequestNotProcessedException(EndpointNotFoundException ex) {
+		return buildResponseEntity(new ApiError(HttpStatus.INTERNAL_SERVER_ERROR, "Request Not Processed!", ex));
 	}
 	
 	@ExceptionHandler(InternalServerException.class)

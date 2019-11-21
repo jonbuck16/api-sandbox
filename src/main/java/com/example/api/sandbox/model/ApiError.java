@@ -17,8 +17,8 @@ public class ApiError {
 
 	@Getter @Setter private HttpStatus status;
 	@Getter @Setter private LocalDateTime timestamp;
+	@Getter @Setter private String type;
 	@Getter @Setter private String message;
-	@Getter @Setter private String debugMessage;
 	@Getter @Setter private List<ApiSubError> subErrors;
 
 	private ApiError() {
@@ -33,15 +33,15 @@ public class ApiError {
 	public ApiError(HttpStatus status, Throwable ex) {
 		this();
 		this.status = status;
-		this.message = "Unexpected error";
-		this.debugMessage = ex.getLocalizedMessage();
+		this.type = "Unexpected Exception";
+		this.message = ex.getLocalizedMessage();
 	}
 
-	public ApiError(HttpStatus status, String message, Throwable ex) {
+	public ApiError(final HttpStatus status, final String type, Throwable ex) {
 		this();
 		this.status = status;
-		this.message = message;
-		this.debugMessage = ex.getLocalizedMessage();
+		this.type = type;
+		this.message = ex.getLocalizedMessage();
 	}
 
 }

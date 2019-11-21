@@ -15,7 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.example.api.sandbox.definition.DefinitionFactory;
 import com.example.api.sandbox.exception.DefinitionParsingException;
-import com.example.api.sandbox.exception.RequestNotFoundException;
+import com.example.api.sandbox.exception.EndpointNotFoundException;
 import com.example.api.sandbox.model.APIDefinition;
 import com.example.api.sandbox.model.RequestResponse;
 
@@ -83,7 +83,7 @@ public class DefinitionService {
 	public CompletableFuture<RequestResponse> processRequest(final HttpServletRequest httpRequest) {
 		try {
 			return apiDefinition.processRequest(httpRequest);
-		} catch (RequestNotFoundException ex) {
+		} catch (EndpointNotFoundException ex) {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Request not found!", ex);
 		}
 	}
