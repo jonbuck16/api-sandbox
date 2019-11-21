@@ -119,9 +119,9 @@ public class OAS30APIDefinition extends AbstractAPIDefinition {
      * @param httpServletRequest
      * @return
      */
+    @SuppressWarnings("rawtypes")
     private CompletableFuture<RequestResponse> processDel(final String path, final Operation operation,
             final HttpServletRequest httpServletRequest) {
-
         ObjectRepository<Map> repository = database.getRepository(Map.class);
         List<ObjectFilter> filters = new LinkedList<>();
         if (operation.getParameters() != null) {
