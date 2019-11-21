@@ -31,7 +31,7 @@ public class OpenApiPathUtilsTest {
 
     @Test
     public void basicPath() throws Exception {
-        Pattern pattern = OpenApiPathUtils.pathToRegex("/basic/path", pathItem, HttpMethod.GET);
+        Pattern pattern = OpenApiUtils.pathToRegex("/basic/path", pathItem, HttpMethod.GET);
 
         Assert.assertThat(pattern.pattern(), CoreMatchers.equalTo("/basic/path"));
     }
@@ -45,7 +45,7 @@ public class OpenApiPathUtilsTest {
         Mockito.when(pathParameter.getSchema()).thenReturn(idSchema);
         Mockito.when(pathParameter.getSchema().getType()).thenReturn("integer");
         
-        Pattern pattern = OpenApiPathUtils.pathToRegex("/basic/{id}", pathItem, HttpMethod.GET);
+        Pattern pattern = OpenApiUtils.pathToRegex("/basic/{id}", pathItem, HttpMethod.GET);
 
         Assert.assertThat(pattern.pattern(), CoreMatchers.equalTo("/basic/[0-9]*"));
     }
@@ -59,7 +59,7 @@ public class OpenApiPathUtilsTest {
         Mockito.when(pathParameter.getSchema()).thenReturn(idSchema);
         Mockito.when(pathParameter.getSchema().getType()).thenReturn("integer");
         
-        Pattern pattern = OpenApiPathUtils.pathToRegex("/basic/{id}/uploadImage", pathItem, HttpMethod.GET);
+        Pattern pattern = OpenApiUtils.pathToRegex("/basic/{id}/uploadImage", pathItem, HttpMethod.GET);
 
         Assert.assertThat(pattern.pattern(), CoreMatchers.equalTo("/basic/[0-9]*/uploadImage"));
     }
@@ -69,7 +69,7 @@ public class OpenApiPathUtilsTest {
         Mockito.when(pathItem.readOperationsMap()).thenReturn(ImmutableMap.of(HttpMethod.GET, getOperation));
         Mockito.when(getOperation.getParameters()).thenReturn(ImmutableList.of());
         
-        Pattern pattern = OpenApiPathUtils.pathToRegex("/basic/{id}/uploadImage", pathItem, HttpMethod.GET);
+        Pattern pattern = OpenApiUtils.pathToRegex("/basic/{id}/uploadImage", pathItem, HttpMethod.GET);
 
         Assert.assertThat(pattern.pattern(), CoreMatchers.equalTo("/basic/\\{id\\}/uploadImage"));
     }
@@ -87,7 +87,7 @@ public class OpenApiPathUtilsTest {
         Mockito.when(idPathParameter.getSchema()).thenReturn(idSchema);
         Mockito.when(idPathParameter.getSchema().getType()).thenReturn("integer");
         
-        Pattern pattern = OpenApiPathUtils.pathToRegex("/basic/{category}/{id}", pathItem, HttpMethod.GET);
+        Pattern pattern = OpenApiUtils.pathToRegex("/basic/{category}/{id}", pathItem, HttpMethod.GET);
         
         Assert.assertThat(pattern.pattern(), CoreMatchers.equalTo("/basic/[a-zA-Z]*/[0-9]*"));
     }
@@ -97,7 +97,7 @@ public class OpenApiPathUtilsTest {
         Mockito.when(pathItem.readOperationsMap()).thenReturn(ImmutableMap.of(HttpMethod.GET, getOperation));
         Mockito.when(getOperation.getParameters()).thenReturn(ImmutableList.of());
         
-        Pattern pattern = OpenApiPathUtils.pathToRegex("/basic/{category}/{id}", pathItem, HttpMethod.GET);
+        Pattern pattern = OpenApiUtils.pathToRegex("/basic/{category}/{id}", pathItem, HttpMethod.GET);
         
         Assert.assertThat(pattern.pattern(), CoreMatchers.equalTo("/basic/\\{category\\}/\\{id\\}"));
     }
@@ -111,7 +111,7 @@ public class OpenApiPathUtilsTest {
         Mockito.when(pathParameter.getSchema()).thenReturn(idSchema);
         Mockito.when(pathParameter.getSchema().getType()).thenReturn("string");
         
-        Pattern pattern = OpenApiPathUtils.pathToRegex("/basic/{id}", pathItem, HttpMethod.GET);
+        Pattern pattern = OpenApiUtils.pathToRegex("/basic/{id}", pathItem, HttpMethod.GET);
 
         Assert.assertThat(pattern.pattern(), CoreMatchers.equalTo("/basic/[a-zA-Z]*"));
     }
@@ -121,7 +121,7 @@ public class OpenApiPathUtilsTest {
         Mockito.when(pathItem.readOperationsMap()).thenReturn(ImmutableMap.of(HttpMethod.GET, getOperation));
         Mockito.when(getOperation.getParameters()).thenReturn(ImmutableList.of());
         
-        Pattern pattern = OpenApiPathUtils.pathToRegex("/basic/{id}", pathItem, HttpMethod.GET);
+        Pattern pattern = OpenApiUtils.pathToRegex("/basic/{id}", pathItem, HttpMethod.GET);
         
         Assert.assertThat(pattern.pattern(), CoreMatchers.equalTo("/basic/\\{id\\}"));
     }

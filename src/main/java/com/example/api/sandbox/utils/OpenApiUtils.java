@@ -11,6 +11,7 @@ import com.example.api.sandbox.Constants;
 import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.oas.models.PathItem.HttpMethod;
 import io.swagger.v3.oas.models.parameters.Parameter;
+import io.swagger.v3.oas.models.parameters.Parameter.StyleEnum;
 import io.swagger.v3.oas.models.parameters.PathParameter;
 
 /**
@@ -18,7 +19,7 @@ import io.swagger.v3.oas.models.parameters.PathParameter;
  * 
  * @since v1
  */
-public class OpenApiPathUtils {
+public class OpenApiUtils {
 
 	private final static Pattern variableKey = Pattern.compile("\\{([a-zA-Z]*)\\}");
 	
@@ -54,5 +55,29 @@ public class OpenApiPathUtils {
         }
         return Pattern.compile(patternValue);
 	}
+
+	/**
+	 * 
+	 * @param style
+	 * @return
+	 */
+    public static String getDelimeterForStyle(StyleEnum style) {
+        switch (style) {
+        case SPACEDELIMITED:
+            return null;
+        case DEEPOBJECT:
+            return null;
+        case FORM:
+            return null;
+        case LABEL:
+            return null;
+        case MATRIX:
+            return null;
+        case PIPEDELIMITED:
+            return Constants.PIPE;
+        default: // Simple
+            return Constants.COMMA;
+        }
+    }
 	
 }

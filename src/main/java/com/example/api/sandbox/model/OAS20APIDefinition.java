@@ -122,7 +122,7 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
             HttpServletRequest httpServletRequest) {
         ObjectRepository<Map> repository = database.getRepository(Map.class);
         Cursor<Map> results = null;
-        if (operation.getParameters().isEmpty()) {
+        if (operation.getParameters() == null || operation.getParameters().isEmpty()) {
             results = repository.find();
         } else {
             List<ObjectFilter> filters = new LinkedList<>();
@@ -247,7 +247,7 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
                 case "path":
                     parametersToValidate.remove(parameter.getName());
                     break;
-                default: // Form Data
+                default: // Query
                     Enumeration<String> parameterNames = httpServletRequest.getParameterNames();
                     while (parameterNames.hasMoreElements()) {
                         final String parameterName = parameterNames.nextElement();

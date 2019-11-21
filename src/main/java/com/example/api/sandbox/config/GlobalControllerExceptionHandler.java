@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import com.example.api.sandbox.exception.InternalServerException;
 import com.example.api.sandbox.exception.InvalidInputException;
 import com.example.api.sandbox.exception.RequestNotFoundException;
 import com.example.api.sandbox.exception.RequestNotProcessedException;
@@ -39,6 +40,11 @@ public class GlobalControllerExceptionHandler extends ResponseEntityExceptionHan
 	@ExceptionHandler(RequestNotProcessedException.class)
 	protected ResponseEntity<Object> handleRequestNotProcessedException(RequestNotFoundException ex) {
 		return buildResponseEntity(new ApiError(HttpStatus.INTERNAL_SERVER_ERROR, "Request not processed!", ex));
+	}
+	
+	@ExceptionHandler(InternalServerException.class)
+	protected ResponseEntity<Object> handleInternalServerError(InternalServerException ex) {
+	    return buildResponseEntity(new ApiError(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), ex));
 	}
 	
 	private ResponseEntity<Object> buildResponseEntity(ApiError apiError) {

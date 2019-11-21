@@ -22,10 +22,11 @@ import org.dizitart.no2.objects.filters.ObjectFilters;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 
+import com.example.api.sandbox.exception.InternalServerException;
 import com.example.api.sandbox.exception.InvalidInputException;
 import com.example.api.sandbox.exception.PathNotFoundException;
 import com.example.api.sandbox.exception.RequestNotFoundException;
-import com.example.api.sandbox.utils.OpenApiPathUtils;
+import com.example.api.sandbox.utils.OpenApiUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
@@ -75,16 +76,18 @@ public class OAS30APIDefinition extends AbstractAPIDefinition {
      * @param httpServletRequest
      */
     @SuppressWarnings("rawtypes")
-    private CompletableFuture<RequestResponse> processGet(final String path, Operation operation, HttpServletRequest httpServletRequest) {
+    private CompletableFuture<RequestResponse> processGet(final String path, Operation operation,
+            HttpServletRequest httpServletRequest) {
         ObjectRepository<Map> repository = database.getRepository(Map.class);
         Cursor<Map> results = null;
-        if (operation.getParameters().isEmpty()) {
+        if (operation.getParameters() == null || operation.getParameters().isEmpty()) {
             results = repository.find();
         } else {
             List<ObjectFilter> filters = new LinkedList<>();
             operation.getParameters()
-                    .forEach(parameter -> filters.add(constructObjectFilter(path, operation, parameter, httpServletRequest)));
-            results = repository.find(ObjectFilters.and(filters.toArray(new ObjectFilter[filters.size()])));
+                    .forEach(parameter -> filters.add(constructObjectFilter(path, parameter, operation, httpServletRequest)));
+            ObjectFilter objectFilter = ObjectFilters.and(filters.toArray(new ObjectFilter[filters.size()]));
+            results = repository.find(objectFilter);
         }
         if (results != null && results.size() > 0) {
             return CompletableFuture.completedFuture(RequestResponse.builder().data(results).httpStatus(HttpStatus.OK).build());
@@ -129,19 +132,9 @@ public class OAS30APIDefinition extends AbstractAPIDefinition {
      * @param httpServletRequest
      * @return
      */
-    @SuppressWarnings("rawtypes")
-    private CompletableFuture<RequestResponse> processPst(Operation operation, HttpServletRequest httpServletRequest) {
-        try (InputStreamReader inputStreamReader = new InputStreamReader(httpServletRequest.getInputStream(),
-                StandardCharsets.UTF_8)) {
-            ObjectMapper mapper = new ObjectMapper();
-            Map<String, Object> data = mapper.readValue(inputStreamReader, new TypeReference<Map<String, Object>>() {});
-            ObjectRepository<Map> repository = database.getRepository(Map.class);
-            repository.insert(data);
-            return CompletableFuture.completedFuture(RequestResponse.builder().data(data).httpStatus(HttpStatus.CREATED).build());
-        } catch (IOException e) {
-            log.atSevere().log(e.getMessage());
-        }
-        return CompletableFuture.completedFuture(RequestResponse.EMPTY);
+    private CompletableFuture<RequestResponse> processPst(final String path, Operation operation,
+            HttpServletRequest httpServletRequest) {
+        return this.processPostPut(path, operation, httpServletRequest);
     }
 
     /**
@@ -150,8 +143,55 @@ public class OAS30APIDefinition extends AbstractAPIDefinition {
      * @param httpServletRequest
      * @return
      */
-    private CompletableFuture<RequestResponse> processPut(Operation operation, HttpServletRequest httpServletRequest) {
-        return CompletableFuture.completedFuture(RequestResponse.builder().httpStatus(HttpStatus.NOT_IMPLEMENTED).build());
+    private CompletableFuture<RequestResponse> processPut(final String path, final Operation operation,
+            final HttpServletRequest httpServletRequest) {
+        return this.processPostPut(path, operation, httpServletRequest);
+    }
+
+    /**
+     * Post and Put should be treated the same..
+     * 
+     * @param path
+     * @param operation
+     * @param httpServletRequest
+     * @return
+     */
+    @SuppressWarnings("rawtypes")
+    private CompletableFuture<RequestResponse> processPostPut(String path, Operation operation,
+            HttpServletRequest httpServletRequest) {
+        try (InputStreamReader inputStreamReader = new InputStreamReader(httpServletRequest.getInputStream(),
+                StandardCharsets.UTF_8)) {
+
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, Object> data = mapper.readValue(inputStreamReader, new TypeReference<Map<String, Object>>() {
+            });
+            ObjectRepository<Map> repository = database.getRepository(Map.class);
+
+            List<ObjectFilter> filters = new LinkedList<>();
+            if (operation.getParameters() != null) {
+                operation.getParameters()
+                        .forEach(parameter -> filters.add(constructObjectFilter(path, parameter, operation, httpServletRequest)));
+            }
+
+            Cursor<Map> results = repository.find(ObjectFilters.and(filters.toArray(new ObjectFilter[filters.size()])));
+            switch (results.size()) {
+            case 0:
+                repository.insert(data);
+                return CompletableFuture
+                        .completedFuture(RequestResponse.builder().data(data).httpStatus(HttpStatus.CREATED).build());
+            case 1:
+                repository.update(ObjectFilters.and(filters.toArray(new ObjectFilter[filters.size()])), data);
+                return CompletableFuture
+                        .completedFuture(RequestResponse.builder().data(results).httpStatus(HttpStatus.CREATED).build());
+            default:
+                return CompletableFuture
+                        .completedFuture(RequestResponse.builder().httpStatus(HttpStatus.UNPROCESSABLE_ENTITY).build());
+            }
+
+        } catch (IOException e) {
+            log.atSevere().log(e.getMessage());
+            throw new InternalServerException("Too many results!");
+        }
     }
 
     @Override
@@ -163,8 +203,8 @@ public class OAS30APIDefinition extends AbstractAPIDefinition {
 
         for (Entry<String, PathItem> entry : openApi.getPaths().entrySet()) {
             final HttpMethod httpMethod = HttpMethod.valueOf(httpServletRequest.getMethod());
-            if (OpenApiPathUtils.pathToRegex(entry.getKey(), entry.getValue(), httpMethod)
-                    .matcher(httpServletRequest.getRequestURI()).matches()) {
+            if (OpenApiUtils.pathToRegex(entry.getKey(), entry.getValue(), httpMethod).matcher(httpServletRequest.getRequestURI())
+                    .matches()) {
                 if (entry.getValue().readOperationsMap().containsKey(httpMethod)) {
                     log.atInfo().log("Request matched to path [%s] %s", httpMethod.name(), entry.getKey());
                     Operation operation = entry.getValue().readOperationsMap().get(httpMethod);
@@ -173,9 +213,9 @@ public class OAS30APIDefinition extends AbstractAPIDefinition {
                     case PATCH:
                         return processPch(operation, httpServletRequest);
                     case POST:
-                        return processPst(operation, httpServletRequest);
+                        return processPst(entry.getKey(), operation, httpServletRequest);
                     case PUT:
-                        return processPut(operation, httpServletRequest);
+                        return processPut(entry.getKey(), operation, httpServletRequest);
                     case TRACE:
                         return processTce(operation, httpServletRequest);
                     case DELETE:
@@ -218,14 +258,18 @@ public class OAS30APIDefinition extends AbstractAPIDefinition {
         if (operation.getParameters() != null) {
             final List<String> parametersToValidate = new ArrayList<>();
             operation.getParameters().forEach(p -> parametersToValidate.add(p.getName()));
-
             for (Parameter parameter : operation.getParameters()) {
                 if (parameter.getRequired()) {
                     switch (parameter.getIn()) {
-                    case "body":
-                        // TODO Validate body against the model
-                        if (httpServletRequest.getContentLength() > 0) {
-                            parametersToValidate.remove(parameter.getName());
+                    case "cookie": // TODO
+                        break;
+                    case "query":
+                        Enumeration<String> parameterNames = httpServletRequest.getParameterNames();
+                        while (parameterNames.hasMoreElements()) {
+                            final String parameterName = parameterNames.nextElement();
+                            if (parameterName.equals(parameter.getName())) {
+                                parametersToValidate.remove(parameter.getName());
+                            }
                         }
                         break;
                     case "header":
@@ -237,59 +281,47 @@ public class OAS30APIDefinition extends AbstractAPIDefinition {
                             }
                         }
                         break;
-                    case "path":
+                    default: // TODO as just removing is not good enough...
                         parametersToValidate.remove(parameter.getName());
-                        break;
-                    default: // formData
-                        Enumeration<String> parameterNames = httpServletRequest.getParameterNames();
-                        while (parameterNames.hasMoreElements()) {
-                            final String parameterName = parameterNames.nextElement();
-                            if (parameterName.equals(parameter.getName())) {
-                                parametersToValidate.remove(parameter.getName());
-                            }
-                        }
                     }
                 } else {
                     parametersToValidate.remove(parameter.getName());
                 }
             }
-
             if (parametersToValidate.size() > 0) {
                 throw new InvalidInputException(400, "The request is invalid!", parametersToValidate);
             }
         }
 
-        if (operation.getRequestBody() != null) {
-            if (httpServletRequest.getContentLength() == 0) {
-                throw new InvalidInputException(400, "The request is invalid!", ImmutableList.of("Request Body"));
-            }
+        if (operation.getRequestBody() != null && httpServletRequest.getContentLength() == 0) {
+            throw new InvalidInputException(400, "The request is invalid!", ImmutableList.of("Request Body"));
         }
     }
-    
+
     /**
      * Retrieves the value for the request for the specified value.
      * 
-     * @param operation          the operation involved
      * @param parameter          the parameter object from the API definition
+     * @param operation          the operation involved
      * @param httpServletRequest in incoming request from which to try and get data
+     * 
      * @return an ObjectFilter
      */
-    private ObjectFilter constructObjectFilter(final String path, final Operation operation, final Parameter parameter,
+    private ObjectFilter constructObjectFilter(final String path, final Parameter parameter, final Operation operation,
             final HttpServletRequest httpServletRequest) {
-        Object value = null;
         switch (parameter.getIn()) {
         case "query":
-            value = httpServletRequest.getParameter(parameter.getName());
-            break;
+            final String[] parameterValues = httpServletRequest.getParameterValues(parameter.getName());
+            List<ObjectFilter> filters = new LinkedList<>();
+            Arrays.asList(parameterValues).forEach(s -> filters.add(ObjectFilters.eq(parameter.getName(), s)));
+            return ObjectFilters.or(filters.toArray(new ObjectFilter[filters.size()]));
         case "header":
-            value = httpServletRequest.getHeader(parameter.getName());
-            break;
+            return ObjectFilters.eq(parameter.getName(), httpServletRequest.getHeader(parameter.getName()));
         default: // path
-            value = handlePathValue(path, parameter, httpServletRequest);
+            return handlePathValue(path, parameter, httpServletRequest);
         }
-        return ObjectFilters.eq(parameter.getName(), value);
     }
-    
+
     /**
      * Extracts a path variable value from the incoming request.
      * 
@@ -298,22 +330,26 @@ public class OAS30APIDefinition extends AbstractAPIDefinition {
      * @param httpServletRequest
      * @return
      */
-    private Object handlePathValue(final String path, final Parameter parameter, final HttpServletRequest httpServletRequest) {
-        Object value;
+    private ObjectFilter handlePathValue(final String path, final Parameter parameter,
+            final HttpServletRequest httpServletRequest) {
         List<String> pathParts = Arrays.asList(path.split("/"));
         List<String> requestParts = Arrays.asList(httpServletRequest.getRequestURI().split("/"));
         switch (parameter.getSchema().getType()) {
+        case "array":
+
+            break;
         case "boolean":
-            value = Boolean.class.cast(requestParts.get(pathParts.indexOf(String.format("{%s}", parameter.getName()))));
+
+            break;
         case "integer":
-            final int indexValue = pathParts.indexOf(String.format("{%s}", parameter.getName()));
-            final String rawValue = requestParts.get(indexValue);
-            value = Integer.valueOf(rawValue);
+
             break;
         default:
-            value = requestParts.get(pathParts.indexOf(String.format("{%s}", parameter.getName())));
+            return ObjectFilters.eq(parameter.getName(),
+                    requestParts.get(pathParts.indexOf(String.format("{%s}", parameter.getName()))));
         }
-        return value;
+        return null;
+
     }
-    
+
 }
