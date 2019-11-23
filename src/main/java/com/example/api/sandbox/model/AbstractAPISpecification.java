@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public abstract class AbstractAPIDefinition implements APIDefinition {
+public abstract class AbstractAPISpecification implements APISpecification {
 	private ModelType modelType;
 
 }

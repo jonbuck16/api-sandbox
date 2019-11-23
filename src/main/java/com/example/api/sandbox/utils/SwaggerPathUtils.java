@@ -13,12 +13,17 @@ import io.swagger.models.Path;
 import io.swagger.models.parameters.Parameter;
 import io.swagger.models.parameters.PathParameter;
 
+/**
+ * Collection of utilities that support the parsing of Swagger API Specifications.
+ * 
+ * @since v1
+ */
 public class SwaggerPathUtils {
 
     private final static Pattern variableKey = Pattern.compile("\\{([a-zA-Z]*)\\}");
 
     /**
-     * Converts the path from an API definition into a regular expression
+     * Converts the path from an API specification into a regular expression
      * 
      * @param path
      * @param rawPath

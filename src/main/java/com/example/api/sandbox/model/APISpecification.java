@@ -12,7 +12,7 @@ import com.example.api.sandbox.exception.EndpointNotFoundException;
  * 
  * @since v1
  */
-public interface APIDefinition {
+public interface APISpecification {
 
 	/**
 	 * 

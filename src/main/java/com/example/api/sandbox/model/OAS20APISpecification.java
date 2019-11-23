@@ -45,7 +45,7 @@ import lombok.extern.flogger.Flogger;
  * @since v1
  */
 @Flogger
-public class OAS20APIDefinition extends AbstractAPIDefinition {
+public class OAS20APISpecification extends AbstractAPISpecification {
 
     @Autowired
     private Nitrite database;
@@ -54,7 +54,7 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
     @Setter
     private Swagger swagger;
 
-    public OAS20APIDefinition() {
+    public OAS20APISpecification() {
         super(ModelType.OAS2);
     }
 
@@ -62,7 +62,7 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
      * Retrieves the value for the request for the specified value.
      * 
      * @param operation          the operation involved
-     * @param parameter          the parameter object from the API definition
+     * @param parameter          the parameter object from the API Specification
      * @param httpServletRequest in incoming request from which to try and get data
      * @return an ObjectFilter
      */
@@ -113,8 +113,8 @@ public class OAS20APIDefinition extends AbstractAPIDefinition {
      * Retrieve data from the in memory database based on the API operation and
      * incoming request.
      * 
-     * @param path               the API path definition
-     * @param operation          the API operation
+     * @param path               the path value
+     * @param operation          the operation
      * @param httpServletRequest the incoming HTTP request
      */
     @SuppressWarnings("rawtypes")

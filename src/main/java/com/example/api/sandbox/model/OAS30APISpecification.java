@@ -22,6 +22,7 @@ import org.dizitart.no2.objects.filters.ObjectFilters;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 
+import com.example.api.sandbox.Constants;
 import com.example.api.sandbox.exception.EndpointNotFoundException;
 import com.example.api.sandbox.exception.InternalServerException;
 import com.example.api.sandbox.exception.InvalidInputException;
@@ -46,7 +47,7 @@ import lombok.extern.flogger.Flogger;
  * @since v1
  */
 @Flogger
-public class OAS30APIDefinition extends AbstractAPIDefinition {
+public class OAS30APISpecification extends AbstractAPISpecification {
 
     @Autowired
     private Nitrite database;
@@ -55,14 +56,14 @@ public class OAS30APIDefinition extends AbstractAPIDefinition {
     @Getter
     private OpenAPI openApi;
 
-    public OAS30APIDefinition() {
+    public OAS30APISpecification() {
         super(ModelType.OAS3);
     }
 
     /**
      * Retrieves the value for the request for the specified value.
      * 
-     * @param parameter          the parameter object from the API definition
+     * @param parameter          the parameter object from the API specification
      * @param operation          the operation involved
      * @param httpServletRequest in incoming request from which to try and get data
      * 
@@ -71,12 +72,12 @@ public class OAS30APIDefinition extends AbstractAPIDefinition {
     private ObjectFilter constructObjectFilter(final String path, final Parameter parameter, final Operation operation,
             final HttpServletRequest httpServletRequest) {
         switch (parameter.getIn()) {
-        case "query":
+        case Constants.QUERY:
             final String[] parameterValues = httpServletRequest.getParameterValues(parameter.getName());
             List<ObjectFilter> filters = new LinkedList<>();
             Arrays.asList(parameterValues).forEach(s -> filters.add(ObjectFilters.eq(parameter.getName(), s)));
             return ObjectFilters.or(filters.toArray(new ObjectFilter[filters.size()]));
-        case "header":
+        case Constants.HEADER:
             return ObjectFilters.eq(parameter.getName(), httpServletRequest.getHeader(parameter.getName()));
         default: // path
             return handlePathValue(path, parameter, httpServletRequest);
@@ -96,13 +97,13 @@ public class OAS30APIDefinition extends AbstractAPIDefinition {
         List<String> pathParts = Arrays.asList(path.split("/"));
         List<String> requestParts = Arrays.asList(httpServletRequest.getRequestURI().split("/"));
         switch (parameter.getSchema().getType()) {
-        case "array":
+        case Constants.ARRAY:
 
             break;
-        case "boolean":
+        case Constants.BOOLEAN:
 
             break;
-        case "integer":
+        case Constants.INTEGER:
 
             break;
         default:

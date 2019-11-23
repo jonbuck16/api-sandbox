@@ -15,7 +15,7 @@ import io.swagger.v3.oas.models.parameters.Parameter.StyleEnum;
 import io.swagger.v3.oas.models.parameters.PathParameter;
 
 /**
- * 
+ * Collection of utilities to support the Open API v3 specification standard.
  * 
  * @since v1
  */
@@ -24,7 +24,7 @@ public class OpenApiUtils {
 	private final static Pattern variableKey = Pattern.compile("\\{([a-zA-Z]*)\\}");
 	
 	/**
-	 * Converts the path from an API definition into a regular expression
+	 * Converts the path from the specification into a regular expression
 	 * 
 	 * @param path
 	 * @param rawPath

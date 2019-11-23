@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.api.sandbox.exception.RequestNotProcessedException;
 import com.example.api.sandbox.model.RequestResponse;
-import com.example.api.sandbox.service.DefinitionService;
+import com.example.api.sandbox.service.SpecificationService;
 
 import lombok.extern.flogger.Flogger;
 
@@ -28,10 +28,10 @@ import lombok.extern.flogger.Flogger;
  * <p>
  * This controller is a universal controller that is configured to receive all
  * requests that are fired into the application, once a request is received the
- * controller will use the Definitions Service to match the signature of the
- * request to an end point defined in the API definition, assuming that one is
+ * controller will use the Specification Service to match the signature of the
+ * request to an end point defined in the API specification, assuming that one is
  * matched the controller will then assert what has been sent against the API
- * definition and then return a response based on the API definition and the
+ * specification and then return a response based on the API specification and the
  * example data contained in the model.
  * </p>
  *
@@ -42,7 +42,7 @@ import lombok.extern.flogger.Flogger;
 public class RequestController {
 
 	@Autowired
-	private DefinitionService definitionsService;
+	private SpecificationService specificationsService;
 	
 
 	@GetMapping(value = "/**", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -78,7 +78,7 @@ public class RequestController {
 	 */
 	private ResponseEntity<?> handleRequest(final HttpServletRequest httpServletRequest) throws Throwable {
 		log.at(Level.INFO).log("Processing incoming request [%s] %s", httpServletRequest.getMethod(), httpServletRequest.getRequestURI());
-		final CompletableFuture<RequestResponse> response = definitionsService.processRequest(httpServletRequest);
+		final CompletableFuture<RequestResponse> response = specificationsService.processRequest(httpServletRequest);
 		RequestResponse requestResponse;
 		try {
 			requestResponse = response.get();
