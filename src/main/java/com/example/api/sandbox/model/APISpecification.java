@@ -22,4 +22,7 @@ public interface APISpecification {
 	CompletableFuture<RequestResponse> processRequest(final HttpServletRequest httpServletRequest)
 			throws EndpointNotFoundException;
 
+	void setRaw(final String raw);
+	
+	String getRaw();
 }

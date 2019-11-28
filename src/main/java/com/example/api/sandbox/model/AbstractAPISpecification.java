@@ -1,11 +1,15 @@
 package com.example.api.sandbox.model;
 
-import lombok.AllArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
+
 import lombok.Data;
 
 @Data
-@AllArgsConstructor
 public abstract class AbstractAPISpecification implements APISpecification {
 	private ModelType modelType;
-
+	private String raw = StringUtils.EMPTY;
+	
+	public AbstractAPISpecification(final ModelType modelType) {
+	    this.modelType = modelType;
+	}
 }
