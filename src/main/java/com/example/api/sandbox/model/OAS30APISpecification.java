@@ -3,9 +3,6 @@ package com.example.api.sandbox.model;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Enumeration;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -22,27 +19,22 @@ import org.dizitart.no2.objects.filters.ObjectFilters;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 
-import com.example.api.sandbox.Constants;
 import com.example.api.sandbox.exception.EndpointNotFoundException;
 import com.example.api.sandbox.exception.InternalServerException;
-import com.example.api.sandbox.exception.InvalidInputException;
 import com.example.api.sandbox.exception.PathNotFoundException;
-import com.example.api.sandbox.utils.OpenApiUtils;
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.example.api.sandbox.utils.OpenApiPathUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.oas.models.PathItem.HttpMethod;
-import io.swagger.v3.oas.models.parameters.Parameter;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.flogger.Flogger;
 
 /**
- * Processes an OpenAPISpecification
+ * Processes an OpenAPI version 3.x Specification
  * 
  * @since v1
  */
@@ -61,73 +53,22 @@ public class OAS30APISpecification extends AbstractAPISpecification {
     }
 
     /**
-     * Retrieves the value for the request for the specified value.
+     * Processes a DELETE request
      * 
-     * @param parameter          the parameter object from the API specification
-     * @param operation          the operation involved
-     * @param httpServletRequest in incoming request from which to try and get data
-     * 
-     * @return an ObjectFilter
-     */
-    private ObjectFilter constructObjectFilter(final String path, final Parameter parameter, final Operation operation,
-            final HttpServletRequest httpServletRequest) {
-        switch (parameter.getIn()) {
-        case Constants.QUERY:
-            final String[] parameterValues = httpServletRequest.getParameterValues(parameter.getName());
-            List<ObjectFilter> filters = new LinkedList<>();
-            Arrays.asList(parameterValues).forEach(s -> filters.add(ObjectFilters.eq(parameter.getName(), s)));
-            return ObjectFilters.or(filters.toArray(new ObjectFilter[filters.size()]));
-        case Constants.HEADER:
-            return ObjectFilters.eq(parameter.getName(), httpServletRequest.getHeader(parameter.getName()));
-        default: // path
-            return handlePathValue(path, parameter, httpServletRequest);
-        }
-    }
-
-    /**
-     * Extracts a path variable value from the incoming request.
-     * 
-     * @param path
-     * @param parameter
-     * @param httpServletRequest
-     * @return
-     */
-    private ObjectFilter handlePathValue(final String path, final Parameter parameter,
-            final HttpServletRequest httpServletRequest) {
-        List<String> pathParts = Arrays.asList(path.split("/"));
-        List<String> requestParts = Arrays.asList(httpServletRequest.getRequestURI().split("/"));
-        switch (parameter.getSchema().getType()) {
-        case Constants.ARRAY:
-
-            break;
-        case Constants.BOOLEAN:
-
-            break;
-        case Constants.INTEGER:
-
-            break;
-        default:
-            return ObjectFilters.eq(parameter.getName(),
-                    requestParts.get(pathParts.indexOf(String.format("{%s}", parameter.getName()))));
-        }
-        return null;
-
-    }
-
-    /**
-     * 
-     * @param operation
-     * @param httpServletRequest
+     * @param path               the path of the request
+     * @param operation          the operation that is being performed
+     * @param httpServletRequest the actual request to process
      * @return
      */
     @SuppressWarnings("rawtypes")
     private CompletableFuture<RequestResponse> processDel(final String path, final Operation operation,
             final HttpServletRequest httpServletRequest) {
         ObjectRepository<Map> repository = database.getRepository(Map.class);
+
         List<ObjectFilter> filters = new LinkedList<>();
         if (operation.getParameters() != null) {
-            operation.getParameters()
-                    .forEach(parameter -> filters.add(constructObjectFilter(path, parameter, operation, httpServletRequest)));
+            operation.getParameters().stream().map(parameter -> OpenApiPathUtils.constructObjectFilter(path, parameter.getIn(),
+                    parameter.getName(), parameter.getSchema().getType(), httpServletRequest)).forEach(filters::add);
         }
 
         if (repository.remove(ObjectFilters.and(filters.toArray(new ObjectFilter[filters.size()]))).getAffectedCount() > 0) {
@@ -138,15 +79,27 @@ public class OAS30APISpecification extends AbstractAPISpecification {
     }
 
     /**
-     * Processes the incoming get request
+     * Processes a GET request
      * 
+     * @param path
      * @param operation
      * @param httpServletRequest
+     * @return
      */
     @SuppressWarnings("rawtypes")
     private CompletableFuture<RequestResponse> processGet(final String path, Operation operation,
             HttpServletRequest httpServletRequest) {
-        Cursor<Map> results = retrieveResults(path, operation, httpServletRequest);
+        Cursor<Map> results = null;
+        ObjectRepository<Map> repository = database.getRepository(Map.class);
+        if (operation.getParameters() == null || operation.getParameters().isEmpty()) {
+            results = repository.find();
+        } else {
+            List<ObjectFilter> filters = new LinkedList<>();
+            operation.getParameters().stream().map(parameter -> OpenApiPathUtils.constructObjectFilter(path, parameter.getIn(),
+                    parameter.getName(), parameter.getSchema().getType(), httpServletRequest)).forEach(filters::add);
+            results = repository.find(ObjectFilters.and(filters.toArray(new ObjectFilter[filters.size()])));
+        }
+        
         if (results != null && results.size() > 0) {
             return CompletableFuture.completedFuture(RequestResponse.builder().data(results).httpStatus(HttpStatus.OK).build());
         } else {
@@ -195,20 +148,20 @@ public class OAS30APISpecification extends AbstractAPISpecification {
      * @param httpServletRequest
      * @return
      */
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     private CompletableFuture<RequestResponse> processPostPut(String path, Operation operation,
             HttpServletRequest httpServletRequest) {
         try (InputStreamReader inputStreamReader = new InputStreamReader(httpServletRequest.getInputStream(),
                 StandardCharsets.UTF_8)) {
 
             ObjectMapper mapper = new ObjectMapper();
-            Map<String, Object> data = mapper.readValue(inputStreamReader, new TypeReference<Map<String, Object>>() {
-            });
+            Map<String, Object> data = mapper.readValue(inputStreamReader, Map.class);
 
             List<ObjectFilter> filters = new LinkedList<>();
             if (operation.getParameters() != null) {
-                operation.getParameters()
-                        .forEach(parameter -> filters.add(constructObjectFilter(path, parameter, operation, httpServletRequest)));
+                operation.getParameters().stream().map(parameter -> OpenApiPathUtils.constructObjectFilter(path, parameter.getIn(),
+                        parameter.getName(), parameter.getSchema().getType(), httpServletRequest)).forEach(filters::add);
+                ;
             }
 
             ObjectRepository<Map> repository = database.getRepository(Map.class);
@@ -273,12 +226,12 @@ public class OAS30APISpecification extends AbstractAPISpecification {
 
         for (Entry<String, PathItem> entry : openApi.getPaths().entrySet()) {
             final HttpMethod httpMethod = HttpMethod.valueOf(httpServletRequest.getMethod());
-            if (OpenApiUtils.pathToRegex(entry.getKey(), entry.getValue(), httpMethod).matcher(httpServletRequest.getRequestURI())
-                    .matches()) {
+            if (OpenApiPathUtils.pathToRegex(entry.getKey(), entry.getValue(), httpMethod)
+                    .matcher(httpServletRequest.getRequestURI()).matches()) {
                 if (entry.getValue().readOperationsMap().containsKey(httpMethod)) {
                     log.atInfo().log("Request matched to path [%s] %s", httpMethod.name(), entry.getKey());
                     Operation operation = entry.getValue().readOperationsMap().get(httpMethod);
-                    validateOperation(operation, httpServletRequest);
+                    OpenApiPathUtils.validateOperation(operation, httpServletRequest);
                     switch (httpMethod) {
                     case PATCH:
                         return processPch(entry.getKey(), operation, httpServletRequest);
@@ -313,83 +266,6 @@ public class OAS30APISpecification extends AbstractAPISpecification {
     private CompletableFuture<RequestResponse> processTce(final String path, final Operation operation,
             final HttpServletRequest httpServletRequest) {
         return CompletableFuture.completedFuture(RequestResponse.builder().httpStatus(HttpStatus.NOT_IMPLEMENTED).build());
-    }
-
-    /**
-     * 
-     * @param path
-     * @param operation
-     * @param httpServletRequest
-     * @return
-     */
-    @SuppressWarnings("rawtypes")
-    private Cursor<Map> retrieveResults(final String path, Operation operation, HttpServletRequest httpServletRequest) {
-        Cursor<Map> results = null;
-        ObjectRepository<Map> repository = database.getRepository(Map.class);
-        if (operation.getParameters() == null || operation.getParameters().isEmpty()) {
-            results = repository.find();
-        } else {
-            List<ObjectFilter> filters = new LinkedList<>();
-            operation.getParameters()
-                    .forEach(parameter -> filters.add(constructObjectFilter(path, parameter, operation, httpServletRequest)));
-            ObjectFilter objectFilter = ObjectFilters.and(filters.toArray(new ObjectFilter[filters.size()]));
-            results = repository.find(objectFilter);
-        }
-        return results;
-    }
-
-    /**
-     * Validates that the request contains the required elements from the operation
-     * 
-     * @param operation          the Operation to validate the request against
-     * @param httpServletRequest the incoming request to validate
-     * @throws an InvalidInputException if the request does not match the operation.
-     */
-    private void validateOperation(final Operation operation, final HttpServletRequest httpServletRequest) {
-        // Generate list of parameters to validate against, we will use this list to
-        // 'tick off' which parameters exist in the request and therefore if anything is
-        // left then that is missing
-        if (operation.getParameters() != null) {
-            final List<String> parametersToValidate = new ArrayList<>();
-            operation.getParameters().forEach(p -> parametersToValidate.add(p.getName()));
-            for (Parameter parameter : operation.getParameters()) {
-                if (parameter.getRequired()) {
-                    switch (parameter.getIn()) {
-                    case "cookie": // TODO
-                        break;
-                    case "query":
-                        Enumeration<String> parameterNames = httpServletRequest.getParameterNames();
-                        while (parameterNames.hasMoreElements()) {
-                            final String parameterName = parameterNames.nextElement();
-                            if (parameterName.equals(parameter.getName())) {
-                                parametersToValidate.remove(parameter.getName());
-                            }
-                        }
-                        break;
-                    case "header":
-                        Enumeration<String> headerNames = httpServletRequest.getHeaderNames();
-                        while (headerNames.hasMoreElements()) {
-                            final String headerName = headerNames.nextElement();
-                            if (headerName.equals(parameter.getName())) {
-                                parametersToValidate.remove(parameter.getName());
-                            }
-                        }
-                        break;
-                    default: // TODO as just removing is not good enough...
-                        parametersToValidate.remove(parameter.getName());
-                    }
-                } else {
-                    parametersToValidate.remove(parameter.getName());
-                }
-            }
-            if (parametersToValidate.size() > 0) {
-                throw new InvalidInputException(400, "The request is invalid!", parametersToValidate);
-            }
-        }
-
-        if (operation.getRequestBody() != null && httpServletRequest.getContentLength() == 0) {
-            throw new InvalidInputException(400, "The request is invalid!", ImmutableList.of("Request Body"));
-        }
     }
 
 }
