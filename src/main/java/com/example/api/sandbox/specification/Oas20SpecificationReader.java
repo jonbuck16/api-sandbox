@@ -1,7 +1,10 @@
 package com.example.api.sandbox.specification;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
+import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 
@@ -26,6 +29,7 @@ public class Oas20SpecificationReader extends AbstractSpecificationReader {
 	public APISpecification parse() throws SpecificationParsingException {
 		try {
 			OAS20APISpecification apiSpecification = (OAS20APISpecification) applicationContext.getBean("Oas20Specification");
+			apiSpecification.setRaw(FileUtils.readFileToString(new File(specificationFile.getCanonicalPath()), StandardCharsets.UTF_8));
 			apiSpecification.setSwagger(new SwaggerParser().read(specificationFile.getCanonicalPath()));
 			return apiSpecification;
 		} catch (IOException e) {
