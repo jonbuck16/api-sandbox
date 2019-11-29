@@ -10,6 +10,7 @@ public abstract class Constants {
     
     // C
     public static final String COMMA = ",";
+    public static final String COOKIE = "cookie";
     
     // H
     public static final String HEADER = "header";

@@ -1,5 +1,16 @@
 package com.example.api.sandbox.utils;
 
+import com.example.api.sandbox.Constants;
+import com.example.api.sandbox.exception.InvalidInputException;
+import com.google.common.collect.ImmutableList;
+import io.swagger.v3.oas.models.Operation;
+import io.swagger.v3.oas.models.PathItem;
+import io.swagger.v3.oas.models.PathItem.HttpMethod;
+import io.swagger.v3.oas.models.parameters.Parameter;
+import io.swagger.v3.oas.models.parameters.PathParameter;
+import org.apache.commons.lang3.StringUtils;
+
+import javax.servlet.http.HttpServletRequest;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Optional;
@@ -7,40 +18,27 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import javax.servlet.http.HttpServletRequest;
-
-import org.apache.commons.lang3.StringUtils;
-
-import com.example.api.sandbox.Constants;
-import com.example.api.sandbox.exception.InvalidInputException;
-import com.google.common.collect.ImmutableList;
-
-import io.swagger.v3.oas.models.Operation;
-import io.swagger.v3.oas.models.PathItem;
-import io.swagger.v3.oas.models.PathItem.HttpMethod;
-import io.swagger.v3.oas.models.parameters.Parameter;
-import io.swagger.v3.oas.models.parameters.Parameter.StyleEnum;
-import io.swagger.v3.oas.models.parameters.PathParameter;
-
 /**
  * Collection of utilities to support the Open API v3 specification standard.
- * 
+ *
  * @since v1
  */
 public class OpenApiPathUtils extends BasePathUtils {
 
+    @SuppressWarnings("RegExpRedundantEscape")
     private final static Pattern variableKey = Pattern.compile("\\{([a-zA-Z]*)\\}");
 
     /**
      * Converts the path from the specification into a regular expression
-     * 
-     * @param path
-     * @param rawPath
-     * @return a new compiled Pattern
+     *
+     * @param path       the request path
+     * @param pathItem   the PathItem from the specification
+     * @param httpMethod the method of the request
+     * @return a new compiled regex pattern to use to match the incoming request.
      */
-    public static Pattern pathToRegex(final String rawPath, final PathItem pathItem, final HttpMethod httpMethod) {
-        Matcher matcher = variableKey.matcher(rawPath);
-        String patternValue = rawPath;
+    public static Pattern pathToRegex(final String path, final PathItem pathItem, final HttpMethod httpMethod) {
+        Matcher matcher = variableKey.matcher(path);
+        String patternValue = path;
         while (matcher.find()) {
             final String variableKeyValue = matcher.group(1);
             if (pathItem.readOperationsMap().containsKey(httpMethod)) {
@@ -65,35 +63,10 @@ public class OpenApiPathUtils extends BasePathUtils {
     }
 
     /**
-     * 
-     * @param style
-     * @return
-     */
-    public static String getDelimeterForStyle(StyleEnum style) {
-        switch (style) {
-        case SPACEDELIMITED:
-            return null;
-        case DEEPOBJECT:
-            return null;
-        case FORM:
-            return null;
-        case LABEL:
-            return null;
-        case MATRIX:
-            return null;
-        case PIPEDELIMITED:
-            return Constants.PIPE;
-        default: // Simple
-            return Constants.COMMA;
-        }
-    }
-
-    /**
      * Validates that the request contains the required elements from the operation
-     * 
+     *
      * @param operation          the Operation to validate the request against
      * @param httpServletRequest the incoming request to validate
-     * @throws an InvalidInputException if the request does not match the operation.
      */
     public static void validateOperation(final Operation operation, final HttpServletRequest httpServletRequest) {
         // Generate list of parameters to validate against, we will use this list to
@@ -105,28 +78,30 @@ public class OpenApiPathUtils extends BasePathUtils {
             for (Parameter parameter : operation.getParameters()) {
                 if (parameter.getRequired()) {
                     switch (parameter.getIn()) {
-                    case "cookie": // TODO
-                        break;
-                    case "query":
-                        Enumeration<String> parameterNames = httpServletRequest.getParameterNames();
-                        while (parameterNames.hasMoreElements()) {
-                            final String parameterName = parameterNames.nextElement();
-                            if (parameterName.equals(parameter.getName())) {
-                                parametersToValidate.remove(parameter.getName());
+                        case Constants.COOKIE:
+                            // TODO: requires implementation to validate
+                            break;
+                        case Constants.QUERY:
+                            Enumeration<String> parameterNames = httpServletRequest.getParameterNames();
+                            while (parameterNames.hasMoreElements()) {
+                                final String parameterName = parameterNames.nextElement();
+                                if (parameterName.equals(parameter.getName())) {
+                                    parametersToValidate.remove(parameter.getName());
+                                }
                             }
-                        }
-                        break;
-                    case "header":
-                        Enumeration<String> headerNames = httpServletRequest.getHeaderNames();
-                        while (headerNames.hasMoreElements()) {
-                            final String headerName = headerNames.nextElement();
-                            if (headerName.equals(parameter.getName())) {
-                                parametersToValidate.remove(parameter.getName());
+                            break;
+                        case Constants.HEADER:
+                            Enumeration<String> headerNames = httpServletRequest.getHeaderNames();
+                            while (headerNames.hasMoreElements()) {
+                                final String headerName = headerNames.nextElement();
+                                if (headerName.equals(parameter.getName())) {
+                                    parametersToValidate.remove(parameter.getName());
+                                }
                             }
-                        }
-                        break;
-                    default: // TODO as just removing is not good enough...
-                        parametersToValidate.remove(parameter.getName());
+                            break;
+                        default:
+                            // TODO as just removing is not good enough...
+                            parametersToValidate.remove(parameter.getName());
                     }
                 } else {
                     parametersToValidate.remove(parameter.getName());
