@@ -1,20 +1,18 @@
 package com.example.api.sandbox.specification;
 
+import com.example.api.sandbox.exception.SpecificationParsingException;
+import com.google.common.io.Files;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.extern.flogger.Flogger;
+import org.springframework.context.ApplicationContext;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.logging.Level;
-
-import org.springframework.context.ApplicationContext;
-
-import com.example.api.sandbox.exception.SpecificationParsingException;
-import com.google.common.io.Files;
-
-import lombok.Builder;
-import lombok.Getter;
-import lombok.extern.flogger.Flogger;
 
 /**
  * Factory which returns the appropriate specification reader for the API file
@@ -41,6 +39,7 @@ public class SpecificationFactory {
 	 * @return a specific <code>specificationReader</code> for the API specification.
 	 */
 	public SpecificationReader getSpecificationReader() {
+		log.atInfo().log(String.format("Using the specifications folder %s", specificationDir));
 		final List<SpecificationReader> apiFiles = new LinkedList<>();
 		for (File file : Files.fileTraverser().breadthFirst(new File(specificationDir))) {
 			try {

@@ -25,9 +25,11 @@ public class BasePathUtils {
                                                      final HttpServletRequest httpServletRequest) {
         switch (in) {
             case Constants.QUERY:
-                final String[] parameterValues = httpServletRequest.getParameterValues(name);
                 List<ObjectFilter> filters = new LinkedList<>();
-                Arrays.asList(parameterValues).forEach(s -> filters.add(ObjectFilters.eq(name, s)));
+                final String[] parameterValues = httpServletRequest.getParameterValues(name);
+                Arrays.asList(parameterValues).forEach(s -> {
+                    filters.add(ObjectFilters.eq(name, s));
+                });
                 return ObjectFilters.or(filters.toArray(new ObjectFilter[0]));
             case Constants.HEADER:
                 return ObjectFilters.eq(name, httpServletRequest.getHeader(name));
@@ -54,7 +56,8 @@ public class BasePathUtils {
             case Constants.ARRAY:
                 // We really need a real world example to complete this implementation type as I am unsure how
                 // this would work in real life, for the moment this is a best guess.
-                return ObjectFilters.in(name, (Object[]) requestParts.get(pathParts.indexOf(String.format("{%s}", name))).split(","));
+                return ObjectFilters.in(name, (Object[]) requestParts.get(pathParts.indexOf(String.format("{%s}", name))).split(
+                        ","));
             case Constants.BOOLEAN:
                 return ObjectFilters.eq(name, Boolean.valueOf(requestParts.get(pathParts.indexOf(String.format("{%s}", name)))));
             case Constants.INTEGER:

@@ -1,14 +1,21 @@
 package com.example.api.sandbox.model;
 
+import com.example.api.sandbox.Constants;
+import com.example.api.sandbox.HttpStatusPatterns;
+import com.example.api.sandbox.OAS3MediaTypes;
 import com.example.api.sandbox.exception.EndpointNotFoundException;
 import com.example.api.sandbox.exception.InternalServerException;
 import com.example.api.sandbox.exception.PathNotFoundException;
+import com.example.api.sandbox.service.ContentService;
 import com.example.api.sandbox.utils.OpenApiPathUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.oas.models.PathItem.HttpMethod;
+import io.swagger.v3.oas.models.media.MediaType;
+import io.swagger.v3.oas.models.responses.ApiResponse;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.flogger.Flogger;
@@ -18,15 +25,14 @@ import org.dizitart.no2.objects.ObjectFilter;
 import org.dizitart.no2.objects.ObjectRepository;
 import org.dizitart.no2.objects.filters.ObjectFilters;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 
@@ -96,7 +102,7 @@ public class OAS30APISpecification extends AbstractAPISpecification {
     private CompletableFuture<RequestResponse> processGet(final String path, Operation operation,
                                                           HttpServletRequest httpServletRequest) {
         Cursor<Map> results;
-        ObjectRepository<Map> repository = database.getRepository(Map.class);
+        final ObjectRepository<Map> repository = database.getRepository(Map.class);
         if (operation.getParameters() == null || operation.getParameters().isEmpty()) {
             results = repository.find();
         } else {
@@ -106,11 +112,54 @@ public class OAS30APISpecification extends AbstractAPISpecification {
             results = repository.find(ObjectFilters.and(filters.toArray(new ObjectFilter[0])));
         }
 
+        final String accept = httpServletRequest.getHeader(HttpHeaders.ACCEPT);
+        final MediaType mediaType = getMediaType(operation, accept);
         if (results != null && results.size() > 0) {
-            return CompletableFuture.completedFuture(RequestResponse.builder().data(results).httpStatus(HttpStatus.OK).build());
+            if (mediaType != null && mediaType.getSchema().getType() != null && mediaType.getSchema().getType().equals(Constants.ARRAY)) {
+                if ("application/xml".equalsIgnoreCase(accept) && mediaType.getSchema().getXml() != null) {
+                    return CompletableFuture.completedFuture(RequestResponse.builder().data(ContentService.asType(accept,
+                            mediaType.getSchema().getXml().getName(),
+                            results.toList())).httpStatus(HttpStatus.OK).build());
+                } else {
+                    return CompletableFuture.completedFuture(RequestResponse.builder().data(ContentService.asType(accept,
+                            results.toList())).httpStatus(HttpStatus.OK).build());
+                }
+            } else {
+                return CompletableFuture.completedFuture(RequestResponse.builder().data(ContentService.asType(accept,
+                        results.firstOrDefault())).httpStatus(HttpStatus.OK).build());
+            }
         } else {
-            return CompletableFuture.completedFuture(RequestResponse.builder().httpStatus(HttpStatus.NOT_FOUND).build());
+            if (mediaType != null && mediaType.getSchema().getType() != null && mediaType.getSchema().getType().equals(Constants.ARRAY)) {
+                if ("application/xml".equalsIgnoreCase(accept) && mediaType.getSchema().getXml() != null) {
+                    return CompletableFuture.completedFuture(RequestResponse.builder().data(ContentService.asType(accept,
+                            mediaType.getSchema().getXml().getName(),
+                            ImmutableList.of())).httpStatus(HttpStatus.OK).build());
+                } else {
+                    return CompletableFuture.completedFuture(RequestResponse.builder().data(new ArrayList()).httpStatus(HttpStatus.OK).build());
+                }
+            } else {
+                return CompletableFuture.completedFuture(RequestResponse.builder().httpStatus(HttpStatus.NOT_FOUND).build());
+            }
         }
+    }
+
+    /**
+     * Returns the media type that is associated with the operation
+     *
+     * @param operation  the operation
+     * @param acceptType the incoming request
+     * @return the media type associated with the request of a default one if one hasn't been specified
+     */
+    private MediaType getMediaType(final Operation operation, final String acceptType) {
+        MediaType mediaType = null;
+        Optional<String> responseCode =
+                operation.getResponses().keySet().parallelStream().filter(s -> s.matches(HttpStatusPatterns.SUCCESS)).findFirst();
+        if (responseCode.isPresent()) {
+            ApiResponse response = operation.getResponses().get(responseCode.get());
+            mediaType = response.getContent().getOrDefault(acceptType,
+                    OAS3MediaTypes.APPLICATION_JSON());
+        }
+        return mediaType;
     }
 
     /**

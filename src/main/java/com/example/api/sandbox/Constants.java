@@ -7,21 +7,25 @@ public abstract class Constants {
     
     // B
     public static final String BOOLEAN = "boolean";
-    
+
     // C
     public static final String COMMA = ",";
     public static final String COOKIE = "cookie";
-    
+
     // H
     public static final String HEADER = "header";
-    
+
     // I
     public static final String INTEGER = "integer";
-    
+
+    // O
+    public static final String OBJECT = "object";
+
     // Q
     public static final String QUERY = "query";
-    
+
     // P
     public static final String PATH = "path";
     public static final String PIPE = "\\|";
+
 }

@@ -1,0 +1,15 @@
+{
+  "category": {
+    "name": "string"
+  },
+  "name": "Ernie",
+  "photoUrls": [
+    "string"
+  ],
+  "tags": [
+    {
+      "type": "dog"
+    }
+  ],
+  "status": "available"
+}

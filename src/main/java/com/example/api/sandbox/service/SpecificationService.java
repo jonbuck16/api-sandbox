@@ -1,10 +1,12 @@
 package com.example.api.sandbox.service;
 
-import java.util.concurrent.CompletableFuture;
-
-import javax.annotation.PostConstruct;
-import javax.servlet.http.HttpServletRequest;
-
+import com.example.api.sandbox.exception.EndpointNotFoundException;
+import com.example.api.sandbox.exception.SpecificationParsingException;
+import com.example.api.sandbox.model.APISpecification;
+import com.example.api.sandbox.model.RequestResponse;
+import com.example.api.sandbox.specification.SpecificationFactory;
+import lombok.Getter;
+import lombok.extern.flogger.Flogger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
@@ -13,14 +15,9 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.example.api.sandbox.exception.SpecificationParsingException;
-import com.example.api.sandbox.exception.EndpointNotFoundException;
-import com.example.api.sandbox.model.APISpecification;
-import com.example.api.sandbox.model.RequestResponse;
-import com.example.api.sandbox.specification.SpecificationFactory;
-
-import lombok.Getter;
-import lombok.extern.flogger.Flogger;
+import javax.annotation.PostConstruct;
+import javax.servlet.http.HttpServletRequest;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Responsible for loading and parsing the API specification at startup
